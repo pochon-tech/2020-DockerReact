@@ -210,11 +210,14 @@ apple@appurunoMacBook-Pro app % touch src/js/components/Layout.js
 - export構文を用いて外部からアクセスできるLayout.jsを作成
 - client.jsに作成したLayout.jsを取り込むことでJSXのLayoutタグが今までどおりclient.jsでも利用できる
 - あわせてHeader、Footerコンポーネントを作成し、Layout.jsで取り込み利用してみる
+- HeaderもしくはFooterで別のコンポーネントを取り込みたい場合は、別のコンポーネントを格納するためのディレクトリを作成するのが一般的
+  - 今回の例だとHeader.jsで取り込むTitleコンポーネントを格納するHeaderディレクトリを作成している
 ```javascript:app/src/js/components/Layout.js
 import React from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 
+// client.jsで使用する全体的なLayoutなコンポーネント
 export default class Layout extends React.Component {
     constructor() {
         super();
@@ -236,14 +239,14 @@ export default class Layout extends React.Component {
 import React from "react";
 import ReactDOM from "react-dom";
 import Layout from "./components/Layout";
-
+// index.htmlのDOMに組み込むエントリーポイント
 const app = document.getElementById('app');
 ReactDOM.render(<Layout />, app);
 ```
-
 ```javascript:app/src/js/components/Header.js
 import React from "react";
-
+import Title from "./Header/Title";
+// Layout.jsで使用するコンポーネント
 export default class Header extends React.Component {
   render() {
     return (
@@ -252,10 +255,20 @@ export default class Header extends React.Component {
   }
 }
 ```
-
+```javascript:app/src/js/components/Header/Title.js
+import React from "react";
+// Header.jsで使用するコンポーネント
+export default class Title extends React.Component {
+  render() {
+    return (
+      <h1>HeaderTitle!!</h1>
+    );
+  }
+}
+```
 ```javascript:app/src/js/components/Footer.js
 import React from "react";
-
+// Layout.jsで使用するコンポーネント
 export default class Footer extends React.Component {
   render() {
     return (
