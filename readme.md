@@ -197,3 +197,70 @@ class Layout extends React.Component {
   }
 }
 ```
+
+## Component化
+
+- 幾つかのファイルに分けていき再利用性を高める
+```zsh
+apple@appurunoMacBook-Pro 2020-02-DockerReact % cd app
+apple@appurunoMacBook-Pro app % mkdir -p ./src/js/components
+apple@appurunoMacBook-Pro app % touch src/js/components/Layout.js
+```
+
+- export構文を用いて外部からアクセスできるLayout.jsを作成
+- client.jsに作成したLayout.jsを取り込むことでJSXのLayoutタグが今までどおりclient.jsでも利用できる
+- あわせてHeader、Footerコンポーネントを作成し、Layout.jsで取り込み利用してみる
+```javascript:app/src/js/components/Layout.js
+import React from "react";
+import Header from "./Header";
+import Footer from "./Footer";
+
+export default class Layout extends React.Component {
+    constructor() {
+        super();
+        this.title = 'Sample Layout'
+    }
+    render() {
+        return (
+            <div>
+                <Header />
+                <h1>{this.title}</h1>
+                <h2>It's: {((num) => { return num + 1 })(3)}</h2>
+                <Footer />
+            </div>
+        );
+    }
+}
+```
+```javascript:app/src/js/client.js
+import React from "react";
+import ReactDOM from "react-dom";
+import Layout from "./components/Layout";
+
+const app = document.getElementById('app');
+ReactDOM.render(<Layout />, app);
+```
+
+```javascript:app/src/js/components/Header.js
+import React from "react";
+
+export default class Header extends React.Component {
+  render() {
+    return (
+      <div>Header</div>
+    );
+  }
+}
+```
+
+```javascript:app/src/js/components/Footer.js
+import React from "react";
+
+export default class Footer extends React.Component {
+  render() {
+    return (
+      <footer>Footer</footer>
+    );
+  }
+}
+```
