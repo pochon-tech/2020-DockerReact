@@ -3,6 +3,14 @@ var webpack = require('webpack');
 var path = require('path');
 
 module.exports = {
+  devServer: {
+    port: 8001, // use any port suitable for your configuration
+    host: '0.0.0.0', // to accept connections from outside container
+    watchOptions: {
+        aggregateTimeout: 500, // delay before reloading
+        poll: 1000 // enable polling since fsevents are not supported in docker
+    }
+  },
   context: path.join(__dirname, "src"),
   entry: "./js/client.js",
   module: {

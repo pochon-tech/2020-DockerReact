@@ -135,3 +135,45 @@ ReactDOM.render(<Layout />, app);
 ```zsh
 apple@appurunoMacBook-Pro app % open -a '/Applications/Google Chrome.app' file:///Users/apple/dev/sample/project/app/src/index.html
 ```
+
+## webpack-dev-serverで開発用webサーバを起動する
+
+- コンテナの中に入って開発用Webサーバを起動する
+```zsh
+apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose up -d
+Creating network "2020-02-dockerreact_default" with the default driver
+Creating 2020-02-dockerreact_app_1 ... done
+apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app sh
+/app # ./node_modules/webpack-dev-server/bin/webpack-dev-server.js --hot --inline --watch-content-base --content-base src --host 0.0.0.0 --port 8001
+```
+- localhost:8001を開くとHTMLが確認できる
+- webpack-dev-serverのサーバーとポートを変更して起動する
+  - --hot: HMR(Hot Module Replacement)を有効
+  - --inline: jsコードが変更されたら（コンパイルして）自動的にブラウザをリロード
+  - --content-base src: htmlやcssなどを置いておくコンテンツベースとなるディレクトリを`作業ディレクトリ/src/`に指定
+  - --watch-content-base: サーバー起動後、自動的に（デフォルトの）ブラウザを開く
+  - ※ Dockerとの兼ね合いのせいかHMRが起動しない 
+
+- コマンドが長いのでpackage.jsonにnpmスクリプトを記述
+```json:app/package.json
+  "scripts": {
+    "start": "webpack-dev-server --hot --inline --watch-content-base --content-base src",
+  },
+```
+- `npm start`でwebpack-dev-serverを起動
+```zsh
+/app # npm start
+```
+
+- ※ Docker対応：`webpack.config.js`にポーリング設定を追記することでHMRの起動
+```javascript:webpack.config.js
+module.exports = {
+  devServer: {
+    port: 8001, // use any port suitable for your configuration
+    host: '0.0.0.0', // to accept connections from outside container
+    watchOptions: {
+        aggregateTimeout: 500, // delay before reloading
+        poll: 1000 // enable polling since fsevents are not supported in docker
+    }
+  },
+```

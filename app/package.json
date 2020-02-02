@@ -4,6 +4,7 @@
   "description": "y",
   "main": "webpack.config.js",
   "scripts": {
+    "start": "webpack-dev-server --hot --inline --watch-content-base --content-base src",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
