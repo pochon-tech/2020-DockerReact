@@ -181,7 +181,7 @@ module.exports = {
 ## JSX基本
 
 - JSX内で匿名関数の定義を行い呼び出したり、コンストラクタで初期化されたメンバ変数を参照などの例
-```javascript:
+```javascript:app/src/js/client.js
 class Layout extends React.Component {
   constructor() {
     super();
