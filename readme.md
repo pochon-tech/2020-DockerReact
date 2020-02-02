@@ -311,3 +311,49 @@ export default class Layout extends React.Component {
     }
 }
 ```
+
+## Propsの基本
+
+- 各コンポーネントに対してパラメータを渡して使うことができ、そうすることでコンポーネント毎に個別の値の引数を渡すことができる
+- Layout=>Header=>Titleに値を渡す実装を行う
+```javascript:app/src/js/components/Layout.js
+import React from "react";
+import Header from "./Header";
+import Footer from "./Footer";
+
+export default class Layout extends React.Component {
+  render() {
+    const title = 'Header Title'
+    return (
+      <div>
+        <Header title={title} />
+        <Footer />
+      </div>
+    );
+  }
+}
+```
+```javascript:app/src/js/components/Header.js
+import React from "react";
+import Title from "./Header/Title";
+
+export default class Header extends React.Component {
+  render() {
+    console.log(this.props)
+    return (
+      <Title title={this.props.title} />
+    );
+  }
+}
+```
+```javascript:app/src/js/components/Header/Title.js
+import React from "react";
+
+export default class Title extends React.Component {
+  render() {
+    return (
+      <h1>{this.props.title}</h1>
+    );
+  }
+}
+```
