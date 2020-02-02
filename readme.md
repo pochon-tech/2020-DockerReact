@@ -180,8 +180,20 @@ module.exports = {
 
 ## JSX基本
 
-- JSX内で匿名関数の定義を行い呼び出すケース
-
+- JSX内で匿名関数の定義を行い呼び出したり、コンストラクタで初期化されたメンバ変数を参照などの例
 ```javascript:
-
+class Layout extends React.Component {
+  constructor() {
+    super();
+    this.title = 'Sample App'
+  }
+  render() {
+    return (
+      <div>
+        <h1>{this.title}</h1>
+        <h2>It's: {((num) => { return num + 1 })(3)}</h2>
+      </div>
+    );
+  }
+}
 ```
