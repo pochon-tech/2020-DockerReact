@@ -357,3 +357,116 @@ export default class Title extends React.Component {
   }
 }
 ```
+
+## Eventの基本
+
+- input要素を追加してユーザがフォームに入力したデータによって、リアルタイムにイベントを発生させる
+```javascript:app/src/js/components/Layout.js
+import React from "react";
+import Header from "./Header";
+import Footer from "./Footer";
+
+export default class Layout extends React.Component {
+  constructor() {
+    super();
+    this.state = { title: "Welcome" };
+  }
+  changeTitle(title) {
+    this.setState({ title })
+  }
+  render() {
+    return (
+      <div>
+        <Header changeTitle={this.changeTitle.bind(this)} title={this.state.title} />
+        <Footer />
+      </div>
+    );
+  }
+}
+```
+```javascript:app/src/js/components/Header.js
+import React from "react";
+import Title from "./Header/Title";
+
+export default class Header extends React.Component {
+  handleChange(e) {
+    const title = e.target.value
+    this.props.changeTitle(title)
+  }
+  render() {
+    console.log(this.props)
+    return (
+      <div>
+        <Title title={this.props.title} />
+        <input value={this.props.title} onChange={this.handleChange.bind(this)} />
+      </div>
+    );
+  }
+}
+```
+```javascript:app/src/js/components/Header/Title.js
+import React from "react";
+
+export default class Title extends React.Component {
+  render() {
+    return (
+      <h1>{this.props.title}</h1>
+    );
+  }
+}
+```
+- `Layout`でtitleをstateで管理する
+- `Layout`にstateの値を変更する`changeTitle`メソッドを定義する
+  - `this.setState({ title })`はES6の書き方であり`this.setState({ title: title })`と同じ意味
+- `Layout`から`Header`に`title`の値と`changeTitle`メソッドを渡す
+  - 渡す理由は、`Header`で`Layout`の`changeTitle`メソッドを呼び出して、`Layout`で管理されているtitleを変更するため
+  - `Layout`では状態の管理のみを行い、input要素によるイベント操作は`Header`の責務にしている
+  - `<Header changeTitle={this.changeTitle.bind(this)} ...>`というようにbind(this)メソッドを呼び出して渡して理由は、確実に`Layout`インスタンスのsetState関数を呼び出すため
+  - bind関数の引数のthis(Layout インスタンス)に対して紐付けをしてあげることで、この関数が`Header`コンポーネント内、またはその他のあらゆる場所で呼ばれたとしても`Layout`インスタンスの`changeTitle`メソッドが呼ばれるようになる
+- `Header`から`Title`にpropsで渡ってきた`title`を渡す
+- `Header`では、input要素のイベントをハンドリングする`handleChange`メソッドを定義する
+  - `handleChange`メソッドでは、input要素のOnChangeイベントから入力値を取り出し、`Layout`インスタンスの`changeTitle`メソッドを呼び出してstateの値を変更している
+- `Title`はpropsで渡ってきたtitleを単純に表示しているだけ
+
+**public class fields syntax によるbind の記載の省略**
+
+- public class fields syntax を使用することでbind の記載を省略できる
+- `@babel/plugin-proposal-class-propertie`というプラグインをインストールする必要がある
+- インストール後は、`.babelrc`もしくはw`ebpack.config.js`に指定する
+```zsh
+/app # npm install --save-dev @babel/plugin-proposal-class-properties
+```
+```.babelrc
+# .babelrcを新規に作成する場合
+{
+  "plugins": [
+    ["@babel/plugin-proposal-class-properties", { "loose": true }]
+  ]
+}
+```
+```javascript:webpack.config.js
+  /* webpackで指定する場合 */
+  use: [{
+    loader: 'babel-loader',
+    options: {
+    presets: ['@babel/preset-react', '@babel/preset-env'],
+    plugins: [
+      ['@babel/plugin-proposal-class-properties', { 'loose': true }]
+    ]
+  }
+```
+- bindを省略する場合は下記のように宣言を変更する
+```javascript:
+  ...
+  changeTitle = (title) => {    /* <- 関数の宣言をこのように変える */
+    this.setState({title});
+  }
+  render() {
+    return (
+      <div>
+        <Header changeTitle={this.changeTitle} title={this.state.title} />    /* <- bind の記載が省略できる */
+        <Footer />
+      </div>
+    );
+  }
+```
