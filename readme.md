@@ -277,3 +277,37 @@ export default class Footer extends React.Component {
   }
 }
 ```
+
+## stateの基本
+
+- Reactはstateというアプリケーションの状態を持つ == コンポーネントをどのようにレンダリングするかといった情報を格納する場所
+- stateは`setState`を通じて変更される -> stateの変更をトリガーに再レンダリングの命令がキューイングされ自動的にコンポーネントの(再)レンダリングがされる
+- stateはReactコンポーネント内にある -> `React.Component`クラスを親に持つクラスから`this.state`でアクセスできる
+- `this.state`のデータは`setState`を通して値が設定されたり変更されると、自動的に更新差分を検知し、renderメソッド内のJSXによって必要なところだけdomが再レンダリングされる
+- 画面描画後、１秒後に名前が出力されるサンプルを以下のように実装する
+```javascript:app/src/js/components/Layout.js
+import React from "react";
+import Header from "./Header";
+import Footer from "./Footer";
+
+export default class Layout extends React.Component {
+    constructor() {
+        super();
+        this.title = 'Sample Layout'
+        this.state = { name: '' }
+    }
+    render() {
+        setTimeout(
+            () => { this.setState({ name: 'Jack' }) }, 1000
+        )
+        return (
+            <div>
+                <Header />
+                <h1>{this.title}</h1>
+                <h2>Hello {this.state.name}</h2>
+                <Footer />
+            </div>
+        );
+    }
+}
+```
