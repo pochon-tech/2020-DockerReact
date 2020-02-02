@@ -4,7 +4,10 @@ import ReactDOM from "react-dom";
 class Layout extends React.Component {
   render() {
     return (
-      <h1>Hello</h1>
+      <div>
+        <h1>Sample</h1>
+        <h2>It's: {((num) => { return num + 1 })(3)}</h2>
+      </div>
     );
   }
 }
