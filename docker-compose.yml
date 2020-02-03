@@ -7,11 +7,21 @@ x-logging:
     max-file: "3"
 services:
 
-  app:
+  # app-basic:
+  #   build: ./
+  #   logging: *default-logging
+  #   volumes:
+  #   - ./app-basic/:/app/
+  #   command: sh
+  #   tty: true
+  #   ports: 
+  #     - "8001:8001"
+
+  app-router:
     build: ./
     logging: *default-logging
     volumes:
-    - ./app/:/app/
+    - ./app-router/:/app/
     command: sh
     tty: true
     ports: 

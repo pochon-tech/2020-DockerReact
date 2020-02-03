@@ -10,6 +10,8 @@ logs
 **/*.back.*
 
 app/node_modules
+app-basic/node_modules
+app-router/node_modules
 bower_components
 *.sublime*
 
