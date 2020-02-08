@@ -31,7 +31,7 @@ services:
     build: ./
     logging: *default-logging
     volumes:
-      - ./app-router/:/app/
+      - ./app-flux/:/app/
     command: sh
     tty: true
     ports: 
