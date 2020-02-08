@@ -408,3 +408,42 @@ export default withRouter(Layout);
   +  <Route path="/settings/:mode(nomal|hard)" component={Settings}></Route>
 ```
 - 上記のルーティングの変更により、Settingコンポーネントで`this.props.match.params.mode`で値を参照できる
+
+## クエリストリングを取得する     
+
+- クエリストリングとはブラウザなどのURLを`http://localhost:8080/archives?date=today&filter=hot`と入力した時に、パラメータとして渡す`?date=today&filter=hot`の`key=value`の値のこと
+- **クエリストリングを React Router で解析するやり方が React Router v4 で撤去されている**
+- React Router v4 からは独自にクエリストリングを解析する必要がある
+
+- URLSearchParamsを使用する方法
+- Layout.jsでクエリストリングを含んだリンクに書き換える
+```javascript:app-router/src/js/pages/Layout.js
+  - <Link to="/archives"><button class="btn btn-danger">archives</button></Link>
+  - <Link to="/archives/some-other-articles" class="btn btn-warning">archives (some other articles)</Link>
+  + <Link to="/archives/some-other-articles?date=yesterday&filter=none" class="btn btn-warning">archives (some-other-articles)</Link>
+  + <Link to="/archives?date=today&filter=hot" class="btn btn-danger">archives</Link>
+```
+- Archivesコンポーネントにクエリストリングを解析して画面に表示
+```javascript:app-router/src/js/pages/Archives.js
+import React from "react";
+
+export default class Archives extends React.Component {
+  render() {
+    // withRouterで囲まれたコンポーネント(Layout)のpropsに渡されるlocationを引数にURLSearchParamsオブジェクトを作成する
+    const query = new URLSearchParams(this.props.location.search)
+    let message
+      = (this.props.match.params.article
+        ? 'URLパラメータ：' + this.props.match.params.article + ", "
+        : "")
+      + "クエリストリング： date=" + query.get("date") + ", filter=" + query.get("filter");
+    return (
+      <div>
+        <h1>Archives</h1>
+        <div> {message}</div>
+      </div>
+    );
+  }
+}
+```
+**URLSearchParams をサポートしていないブラウザ対応**
+- query-stringライブラリを使って解析する方法がある
