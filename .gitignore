@@ -12,6 +12,7 @@ logs
 app/node_modules
 app-basic/node_modules
 app-router/node_modules
+app-flux/node_modules
 bower_components
 *.sublime*
 

@@ -17,7 +17,17 @@ services:
   #   ports: 
   #     - "8001:8001"
 
-  app-router:
+  # app-router:
+  #   build: ./
+  #   logging: *default-logging
+  #   volumes:
+  #     - ./app-router/:/app/
+  #   command: sh
+  #   tty: true
+  #   ports: 
+  #     - "8001:8001"
+
+  app-flux:
     build: ./
     logging: *default-logging
     volumes:
