@@ -447,3 +447,17 @@ export default class Archives extends React.Component {
 ```
 **URLSearchParams をサポートしていないブラウザ対応**
 - query-stringライブラリを使って解析する方法がある
+
+## activeClassNameを使用する
+
+- `NavLink`を使うと`activeClassName`というpropを使って該当するリンクが表示されている時に適用するHTMLのclass値を指定可能
+```javascript:app-router/src/js/pages/Layout.js
+import { NavLink, Link, withRouter } from "react-router-dom"; // Navlinkを追加
+
+  - <Link to="/settings/nomal"><button class="btn btn-success">settings (Nomal)</button></Link>
+  + <NavLink to="/settings/nomal" class="btn btn-success" activeClassName="btn-danger">settings (Nomal)</NavLink>
+```
+- **NavLinkのtoにquery stringが含まれる場合、activeClassNameに指定したclassが正しく反映されない**
+- ※React Router v4 からquery string に対しての機能を取り除いたため
+
+
