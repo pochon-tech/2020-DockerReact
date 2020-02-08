@@ -458,6 +458,225 @@ import { NavLink, Link, withRouter } from "react-router-dom"; // Navlinkを追�
   + <NavLink to="/settings/nomal" class="btn btn-success" activeClassName="btn-danger">settings (Nomal)</NavLink>
 ```
 - **NavLinkのtoにquery stringが含まれる場合、activeClassNameに指定したclassが正しく反映されない**
-- ※React Router v4 からquery string に対しての機能を取り除いたため
+- ※ React Router v4 からquery stringに対しての機能を取り除いたため
 
+## 静的コンテンツのコンポーネント化
 
+- `src/index.html`内の静的コンテンツを各Reactコンポーネントに移動していく
+
+- まずは、bodyタグ内部をごっそり削る
+```html:app-router/src/index.html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <title>React</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.6/cerulean/bootstrap.min.css" rel="stylesheet">
+  <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+  <div id="app"></div>
+  <script src="/client.min.js"></script>
+</body>
+
+</html>
+```
+- ヘッダ部分のリンクのルーティングを`src/js/client.js`に定義する
+```javascript:app-router/src/js/client.js
+import React from "react";
+import ReactDOM from "react-dom";
+import { BrowserRouter as Router, Route } from "react-router-dom";
+
+import Layout from "./pages/Layout";
+import Featured from "./pages/Featured";
+import Archives from "./pages/Archives";
+import Settings from "./pages/Settings";
+
+const app = document.getElementById('app');
+
+ReactDOM.render(
+  <Router>
+    <Layout>
+      <Route exact path="/" component={Featured}></Route>
+      <Route path="/archives/:article" name="archives" component={Archives}></Route>
+      <Route path="/settings" name="settings" component={Settings}></Route>
+    </Layout>
+  </Router>,
+app);
+```
+- ページ全体（Body内部）のコンポーネント`src/js/pages/Layout.js`を作成する
+- 後述で作成するNavコンポーネントに対して`location`を渡すようにして、Navコンポーネント側で選択中のActiveClassNameを実現する
+```javascript:app-router/src/js/pages/Layout.js
+import React from "react";
+import { withRouter } from "react-router-dom";
+
+import Footer from "../components/layout/Footer";
+import Nav from "../components/layout/Nav";
+
+class Layout extends React.Component {
+  render() {
+    const { location } = this.props;
+    const containerStyle = {
+      marginTop: "60px"
+    };
+    return (
+      <div>
+        <Nav location={location} />
+        {/** 中央に記事を出力するようにcontainerStyleを指定する */}
+        <div class="container" style={containerStyle}>
+          <div class="row">
+            <div class="col-lg-12">
+              <h1>Sample</h1>
+              {/** client.jsでLayoutコンポーネントでwrapしている子コンポーエントを表示する */}
+              {this.props.children}
+            </div>
+          </div>
+          <Footer />
+        </div>
+      </div>
+    );
+  }
+}
+/** withRouterで囲む */
+export default withRouter(Layout);
+```
+- Layoutコンポーネントで使用するNavコンポーネント`src/js/components/layout/Nav.js`を作成する
+```javascript:app-router/src/js/components/layout/Footer.js
+import React from "react";
+import { Link } from "react-router-dom";
+
+export default class Nav extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      collapsed: true
+    };
+  }
+  /**  Bootstrapのナビゲーションバーの再現を行うための関数
+   *   (data-toggle="collapse" data-target="#bs-example-navbar-collapse-1"） */
+  toggleCollapse() {
+    const collapsed = !this.state.collapsed;
+    this.setState({collapsed});
+  }
+  render() {
+    const { location } = this.props; // Layoutコンポーネントから渡ってくるlocation情報
+    const { collapsed } = this.state; // 
+    const featuredClass = location.pathname === "/" ? "active" : ""; // アクセスパスが/の時は、featuredクラスをアクティブ状態
+    const archivesClass = location.pathname.match(/^\/archives/) ? "active" : ""; // アクセスパスが/archivesの時は、archivesクラスをアクティブ状態
+    const settingsClass = location.pathname.match(/^\/settings/) ? "active" : ""; // アクセスパスが/settingsの時は、settingsクラスをアクティブ状態
+    const navClass = collapsed ? "collapse" : "";
+    return (
+      <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+          <div class="navbar-header">
+            {/** onClick = data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" */}
+            <button type="button" class="navbar-toggle" onClick={this.toggleCollapse.bind(this)}>
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+          </div>
+          <div class={"navbar-collapse " + navClass} id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+              {/** アクセスパスによってactive状態のliが変化する */}
+              <li class={featuredClass}>
+                {/** onClick = icon-barとの対応付 */}
+                <Link to="/" onClick={this.toggleCollapse.bind(this)}>Featured</Link>
+              </li>
+              <li class={archivesClass}>
+                <Link to="/archives/news?date=today&filter=none" onClick={this.toggleCollapse.bind(this)}>Archives</Link>
+              </li>
+              <li class={settingsClass}>
+                <Link to="/settings" onClick={this.toggleCollapse.bind(this)}>Settings</Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+}
+```
+
+- Layoutコンポーネントで使用するNavコンポーネント`src/js/components/layout/Footer.js`を作成する
+```javascript:app-router/src/js/components/layout/Footer.js
+import React from "react";
+
+export default class Footer extends React.Component {
+  render() {
+    return (
+      <footer>
+        <div class="row">
+          <div class="col-lg-12">
+            <p>Copyright &copy; Sammple</p>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+}
+```
+
+- ArchivesページおよびFeaturedページから呼び出される記事のテンプレート用コンポーネント`src/js/components/Article.js`を作成する
+```javascript:app-router/src/js/components/Article.js
+import React from "react";
+
+export default class Article extends React.Component {
+  render() {
+    const { title } = this.props;
+
+    return (
+      <div class="col-md-4">
+        <h4>{title}</h4>
+        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Saepe rem nisi accusamus error velit animi non ipsa placeat. Recusandae, suscipit, soluta quibusdam accusamus a veniam quaerat eveniet eligendi dolor consectetur.</p>
+        <a class="btn btn-default" href="#">More Info</a>
+      </div>
+    );
+  }
+}
+```
+
+- Archivesページ`src/js/pages/Archives.js`を作成する
+```javascript:app-router/src/js/pages/Archives.js
+import React from "react";
+import Article from "../components/Article";
+
+/** アーカイブページ */
+export default class Archives extends React.Component {
+  render() {
+    /** クエリストリングを取得するためのURLSearchParamsオブジェクトを作成する */
+    const query = new URLSearchParams(this.props.location.search)
+    /** URLパラメータを取得する */
+    const { article } = this.props.match.params;
+    const date = query.get("date");
+    const filter = query.get("filter");
+
+    /** 記事テンプレートにタイトルを渡して記事コンポーネントを作成する */
+    const Articles = [
+      "Some Article",
+      "Some Other Article",
+      "Yet Another Article",
+      "Still More",
+      "Fake Article",
+      "Partial Article",
+      "American Article",
+      "Mexican Article"
+    ].map((title, i) => <Article key={i} title={title} />);
+
+    return (
+      <div>
+        <h1>Archives</h1>
+        article: {article}, date: {date}, filter: {filter}
+        <div class="row">{Articles}</div>
+      </div>
+    );
+  }
+}
+```

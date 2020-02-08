@@ -1,27 +1,31 @@
 import React from "react";
-import { NavLink, Link, withRouter } from "react-router-dom"; // Navlinkを追加
+import { withRouter } from "react-router-dom";
 
-// withRouterでLayputClassを囲む必要があるのでexport defaultを消す
+import Footer from "../components/layout/Footer";
+import Nav from "../components/layout/Nav";
+
 class Layout extends React.Component {
-  /** / に遷移する関数 */
-  navigate() {
-    console.log(this.props.history);
-    this.props.history.push("/");
-  }
   render() {
+    const { location } = this.props;
+    const containerStyle = {
+      marginTop: "60px"
+    };
     return (
       <div>
-        <h1>Sample</h1>
-        {this.props.children}
-        <Link to="/archives/some-other-articles?date=yesterday&filter=none" class="btn btn-warning">archives (some-other-articles)</Link>
-        <Link to="/archives?date=today&filter=hot" class="btn btn-danger">archives</Link>
-        <NavLink to="/settings/nomal" class="btn btn-success" activeClassName="btn-danger">settings (Nomal)</NavLink>
-        <Link to="/settings/hard"><button class="btn btn-success">settings (Hard)</button></Link>
-        <button class="btn btn-info" onClick={this.navigate.bind(this)}>featured</button>
+        <Nav location={location} />
+        {/** 中央に記事を出力するようにcontainerStyleを指定する */}
+        <div class="container" style={containerStyle}>
+          <div class="row">
+            <div class="col-lg-12">
+              <h1>Sample</h1>
+              {/** client.jsでLayoutコンポーネントでwrapしている子コンポーエントを表示する */}
+              {this.props.children}
+            </div>
+          </div>
+          <Footer />
+        </div>
       </div>
     );
   }
 }
-// withRouterでLayputClassを囲む
 export default withRouter(Layout);
-

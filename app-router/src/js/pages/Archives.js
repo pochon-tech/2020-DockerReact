@@ -1,18 +1,33 @@
 import React from "react";
+import Article from "../components/Article";
 
+/** アーカイブページ */
 export default class Archives extends React.Component {
   render() {
-    // withRouterで囲まれたコンポーネント(Layout)のpropsに渡されるlocationを引数にURLSearchParamsオブジェクトを作成する
+    /** クエリストリングを取得するためのURLSearchParamsオブジェクトを作成する */
     const query = new URLSearchParams(this.props.location.search)
-    let message
-      = (this.props.match.params.article
-        ? 'URLパラメータ：' + this.props.match.params.article + ", "
-        : "")
-      + "クエリストリング： date=" + query.get("date") + ", filter=" + query.get("filter");
+    /** URLパラメータを取得する */
+    const { article } = this.props.match.params;
+    const date = query.get("date");
+    const filter = query.get("filter");
+
+    /** 記事テンプレートにタイトルを渡して記事コンポーネントを作成する */
+    const Articles = [
+      "Some Article",
+      "Some Other Article",
+      "Yet Another Article",
+      "Still More",
+      "Fake Article",
+      "Partial Article",
+      "American Article",
+      "Mexican Article"
+    ].map((title, i) => <Article key={i} title={title} />);
+
     return (
       <div>
         <h1>Archives</h1>
-        <div> {message}</div>
+        article: {article}, date: {date}, filter: {filter}
+        <div class="row">{Articles}</div>
       </div>
     );
   }
