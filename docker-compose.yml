@@ -11,7 +11,7 @@ services:
   #   build: ./
   #   logging: *default-logging
   #   volumes:
-  #   - ./app-basic/:/app/
+  #   - ./app/:/app/
   #   command: sh
   #   tty: true
   #   ports: 
@@ -21,7 +21,7 @@ services:
     build: ./
     logging: *default-logging
     volumes:
-    - ./app-router/:/app/
+      - ./app-router/:/app/
     command: sh
     tty: true
     ports: 
