@@ -429,4 +429,187 @@ export default class Settings extends React.Component {
 }
 ```
 
-## Storeを作成する
+## Storeへの移行作業
+
+- 前述したがStoreの役割は、**Storeが保持しているデータに変更があったらViewに送る**機能を持つ
+- その機能を実現するために、EventEmitterを使ってStoreを作成する
+- 場所は`src/js/stores/TodoStore.js`
+- まずは、ベースのクラス定義を実装する
+```javascript:app-flux/src/js/stores/TodoStore.js
+/** 
+ * EventEmitterを使用したイベント駆動型のクラスを定義するのに必要
+ * TodoStoreクラスをEventEmitterで継承させることで、コンポーネント側からTodoStore.on("change")等でイベントを受け取ったり、
+ * TodoStoreクラス内でthis.emit()を行ったりすることができる
+*/
+import { EventEmitter } from "events";
+
+class TodoStore extends EventEmitter {
+  constructor(){
+    super();
+    /** Todos.jsのstateで管理していたデータを移行 */
+    this.todos = [
+      {
+        id: 1,
+        text: "Go Shop",
+        complete: false
+      },
+      {
+        id: 2,
+        text: "Pay Bills",
+        complete: false
+      }
+    ]
+  }  
+  /** todoリストを全て返すGetter */
+  getAll() {
+    return this.todos;
+  }
+}
+
+/** シングルトンパターン */
+const todoStore = new TodoStore;
+export default todoStore;
+```
+- 状態管理をするStoreはそれぞれシングルトンパターンとなるように作成する
+- シングルトンパターンな構成になるように、`const todoStore = new TodoStore;`のようにインスタンスを生成してインスタンスをExportしている
+- Todosページで管理していたstateをストア側に移行した
+- データを返す関数`getAll()`を定義した
+
+- 続いて、`src/js/pages/Todos.js`を編集する
+- データの部分を削除して、Todoストアからデータをインポートするように修正する
+```javascript:app-flux/src/js/pages/Todos.js
+import React from "react";
+
+import Todo from "../components/Todo.js";
+/** Todoストアを読み込む */
+import TodoStore from "../stores/TodoStore";
+
+/** TodoListのページ */
+class Todos extends React.Component {
+  constructor() {
+    super();
+    /** TodoList */
+    this.state = {
+      /** TodoストアのGetterを呼び出す */
+      todos: TodoStore.getAll()
+    };
+  }
+
+  render() {
+    const { todos } = this.state
+    /** Todoコンポーネントをstateに格納されている数分使用する */
+    const TodoComponents = todos.map(todo => <Todo key={todo.id} {...todo} />)
+    return (
+      <div>
+        <h1>Todo List</h1>
+        {TodoComponents}
+      </div>
+    )
+  };
+}
+
+export default Todos;
+```
+
+## 動的にTodoリストを更新できるようにする
+
+- ストアに`createTodo()`メソッドを作成し、Todoを登録できるように改修する
+- この`createTodo()`メソッドは、呼ばれると`change`イベントが発火されView側の処理を呼び出すようにする（イベント駆動型）
+
+```javascript:app-flux/src/js/stores/TodoStore.js
+/** 
+ * EventEmitterを使用したイベント駆動型のクラスを定義するのに必要
+ * TodoStoreクラスをEventEmitterで継承させることで、コンポーネント側からTodoStore.on("change")等でイベントを受け取ったり、
+ * TodoStoreクラス内でthis.emit()を行ったりすることができる
+*/
+import { EventEmitter } from "events";
+
+class TodoStore extends EventEmitter {
+  constructor(){
+    super();
+    /** Todos.jsのstateで管理していたデータを移行 */
+    this.todos = [
+      {
+        id: 1,
+        text: "Go Shop",
+        complete: false
+      },
+      {
+        id: 2,
+        text: "Pay Bills",
+        complete: false
+      }
+    ]
+  }
+  /** todoリストを全て返すGetter */
+  getAll() {
+    return this.todos;
+  }
+  /** todo登録イベント発火用メソッド */
+  createTodo(text) {
+    const id = Date.now();
+    this.todos.push({
+      id,
+      text,
+      complete: false
+    });
+    this.emit("change");
+  }
+}
+
+/** シングルトンパターン */
+const todoStore = new TodoStore;
+export default todoStore;
+```
+
+- 続いて、View側であるTodos.jsに初期化処理用の`componentDidMount`メソッドを追加する
+- `componentDidMount`はコンポーネントがマウントされた（ツリーに挿入された）直後に呼び出される
+- DOMノードを必要とする初期化は`componentDidMount`で行われるべき
+
+```javascript:app-flux/src/js/pages/Todos.js
+import React from "react";
+
+import Todo from "../components/Todo.js";
+/** Todoストアを読み込む */
+import TodoStore from "../stores/TodoStore";
+
+/** TodoListのページ */
+class Todos extends React.Component {
+  constructor() {
+    super();
+    /** TodoList */
+    this.state = {
+      /** TodoストアのGetterを呼び出す */
+      todos: TodoStore.getAll()
+    };
+  }
+  /** 初期化処理 */
+  componentDidMount() {
+    TodoStore.on("change",()=>{
+      this.setState({
+        todos: TodoStore.getAll()
+      })
+    })
+  }
+  render() {
+    const { todos } = this.state
+    /** Todoコンポーネントをstateに格納されている数分使用する */
+    const TodoComponents = todos.map(todo => <Todo key={todo.id} {...todo} />)
+    return (
+      <div>
+        <h1>Todo List</h1>
+        {TodoComponents}
+      </div>
+    )
+  };
+}
+
+export default Todos;
+```
+
+**GoogleChromeのコンソール上からdebugを行うために、TodoStore.jsに下記の処理をインスタンス生成した後に追加する**
+
+- 下記のようにtodoStoreメソッドがグローバルスコープで呼び出せるようにwindow.todoStoreにTodoStoreインスタンスを格納
+- `window.todoStore = todoStore;`
+- Chromeブラウザの開発者モードでconsoleを開き、下記を実行して動作確認を行う (確認が終わったら削除する)
+- `todoStore.createTodo('test')`

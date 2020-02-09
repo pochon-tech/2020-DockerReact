@@ -1,6 +1,8 @@
 import React from "react";
 
 import Todo from "../components/Todo.js";
+/** Todoストアを読み込む */
+import TodoStore from "../stores/TodoStore";
 
 /** TodoListのページ */
 class Todos extends React.Component {
@@ -8,21 +10,18 @@ class Todos extends React.Component {
     super();
     /** TodoList */
     this.state = {
-      todos: [
-        {
-          id: 1,
-          text: "Go Shop",
-          complete: false
-        },
-        {
-          id: 2,
-          text: "Pay Bills",
-          complete: false
-        }
-      ]
+      /** TodoストアのGetterを呼び出す */
+      todos: TodoStore.getAll()
     };
   }
-
+  /** 初期化処理 */
+  componentDidMount() {
+    TodoStore.on("change",()=>{
+      this.setState({
+        todos: TodoStore.getAll()
+      })
+    })
+  }
   render() {
     const { todos } = this.state
     /** Todoコンポーネントをstateに格納されている数分使用する */
