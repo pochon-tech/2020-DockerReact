@@ -114,5 +114,319 @@ apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-flux sh
 # fluxのパッケージ導入
 /app # npm install --save-dev flux
 ```
+- webpack.config.jsの作成
 
+```javascript:app-flux/webpack.config.js
+var debug = process.env.NODE_ENV !== "production";
+var webpack = require('webpack');
+var path = require('path');
 
+module.exports = {
+  context: path.join(__dirname, "src"),
+  entry: "./js/client.js",
+  module: {
+    rules: [{
+      test: /\.jsx?$/,
+      exclude: /(node_modules|bower_components)/,
+      use: [{
+        loader: 'babel-loader',
+        options: {
+          plugins: ['react-html-attrs'],
+          presets: ['@babel/preset-react', '@babel/preset-env']
+        }
+      }]
+    }]
+  },
+  output: {
+    path: __dirname + "/src/",
+    filename: "client.min.js",
+    publicPath: '/'
+  },
+  devServer: {
+    port: 8001, // use any port suitable for your configuration
+    host: '0.0.0.0', // to accept connections from outside container
+    watchOptions: {
+      aggregateTimeout: 500, // delay before reloading
+      poll: 1000 // enable polling since fsevents are not supported in docker
+    },
+    historyApiFallback: true
+  },
+  plugins: debug ? [] : [
+    new webpack.optimize.OccurrenceOrderPlugin(),
+    new webpack.optimize.UglifyJsPlugin({ mangle: false, sourcemap: false }),
+  ],
+};
+```
+
+- ベースのコンテンツを作成 (構成は基本的にapp-routerとほぼ同じ)
+
+- SPAのベースページ`src/index.html`の作成
+```html:app-flux/src/index.html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="" />
+  <meta name="author" content="" />
+  <title>React</title>
+  <!-- Bootstrap Core CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.6/cerulean/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Custom Fonts -->
+  <!-- <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" /> -->
+  <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic"
+    rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+  <div id="app"></div>
+  <script src="client.min.js"></script>
+</body>
+
+</html>
+```
+
+- webpack対象のエントリーファイル`src/js/client.js`の作成
+```javascript:app-flux/src/js/client.js
+import React from "react";
+import ReactDOM from "react-dom";
+/** Routerを使用してページ遷移を行う想定 */
+import { BrowserRouter as Router, Route } from "react-router-dom";
+
+/** pages群のコンポーネント */
+import Layout from "./pages/Layout"; // Topページ（ベース）
+import Todos from "./pages/Todos"; // Todo一覧ページ（/)
+import Favorites from "./pages/Favorites"; // Favoriteページ（/favorite）
+import Settings from "./pages/Settings"; // Settingsページ（/Settings）
+
+const app = document.getElementById('app');
+
+/** ルーティング設定 */
+ReactDOM.render(
+  <Router>
+    <Layout>
+      <Route exact path="/" component={Todos}></Route>
+      <Route path="/favorites" component={Favorites}></Route>
+      <Route path="/settings" component={Settings}></Route>
+    </Layout>
+  </Router>,
+  app);
+```
+
+- ベースのページ`src/js/pages/Layout.js`の作成
+```javascript:app-flux/src/js/pages/Layout.js
+import React from "react";
+import { Link, withRouter } from "react-router-dom";
+
+/** ヘッダとフッダのコンポーネント */
+import Nav from "../components/Layout/Nav";
+import Footer from "../components/Layout/Footer"
+
+class Layout extends React.Component {
+  render() {
+    /** historyオブジェクトのlocationを取得 */
+    const { location } = this.props;
+    const containerStyle = {
+      marginTop: "60px"
+    };
+    return (
+      <div>
+        {/** Navコンポーネントにlocation情報を渡す */}
+        <Nav location={location} />
+        <div class="container" style={containerStyle}>
+          <div class="row">
+            <div class="col-lg-12">
+              {/** client.jsでLayoutコンポーネントでラップされた子コンポーネントを表示する */}
+              {this.props.children}
+            </div>
+          </div>
+          <Footer />
+        </div>
+      </div>
+    );
+  }
+}
+export default withRouter(Layout)
+```
+
+- Layoutページで使用するヘッダ`src/js/components/layout/Nav.js`の作成
+```javascript:app-flux/src/js/components/layout/Nav.js
+import React from "react";
+import { Link } from "react-router-dom";
+
+/** ナビコンポーネントは、app-routerと同様にBootstrapのトグルヘッダにReactRouterのLinkを適応させるようにしている */
+export default class Nav extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      collapsed: true
+    };
+  }
+  toggleCollapse() {
+    const collapsed = !this.state.collapsed;
+    this.setState({ collapsed });
+  }
+
+  render() {
+    const { location } = this.props;
+    const { collapsed } = this.state;
+    const featuredClass = location.pathname === "/" ? "active" : "";
+    const archivesClass = location.pathname.match(/^\/favorites/) ? "active" : "";
+    const settingsClass = location.pathname.match(/^\/settings/) ? "active" : "";
+    const navClass = collapsed ? "collapse" : "";
+
+    return (
+      <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle" onClick={this.toggleCollapse.bind(this)}>
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+          </div>
+          <div class={"navbar-collapse"} id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav">
+              <li class={featuredClass}>
+                <Link to="/" onClick={this.toggleCollapse.bind(this)}>Todos</Link>
+              </li>
+              <li class={archivesClass}>
+                <Link to="favorites" onClick={this.toggleCollapse.bind(this)}>Favorites</Link>
+              </li>
+              <li class={settingsClass}>
+                <Link to="settings" onClick={this.toggleCollapse.bind(this)}>Settings</Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    );
+  };
+}
+```
+
+- Layoutページで使用するヘッダ`src/js/components/layout/Footer.js`の作成
+```javascript:app-flux/src/js/components/layout/Footer.js
+import React from "react";
+
+export default class Footer extends React.Component {
+  render() {
+    const footerStyles = {
+      marginTop: "30px"
+    };
+    return (
+      <footer style={footerStyles}>
+        <div class="row">
+          <div class="row">
+            <p>Copyright &copy; Sample.com</p>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+}
+```
+
+- Todoのページ`src/js/pages/Todos.js`の作成
+```javascript:app-flux/src/js/pages/Todos.js
+import React from "react";
+
+import Todo from "../components/Todo.js";
+
+/** TodoListのページ */
+class Todos extends React.Component {
+  constructor() {
+    super();
+    /** TodoList */
+    this.state = {
+      todos: [
+        {
+          id: 1,
+          text: "Go Shop",
+          complete: false
+        },
+        {
+          id: 2,
+          text: "Pay Bills",
+          complete: false
+        }
+      ]
+    };
+  }
+
+  render() {
+    const { todos } = this.state
+    /** Todoコンポーネントをstateに格納されている数分使用する */
+    const TodoComponents = todos.map(todo => <Todo key={todo.id} {...todo} />)
+    return (
+      <div>
+        <h1>Todo List</h1>
+        {TodoComponents}
+      </div>
+    )
+  };
+}
+
+export default Todos;
+```
+
+- Todosページで使用するTodoコンポーネント`src/js/components/Todo.js`の作成
+```javascript:app-flux/src/js/components/Todo.js
+import React from 'react';
+
+export default class Todo extends React.Component {
+  constructor(props) {
+    /** propsなしのsuper()呼び出しでも、render()や他のメソッド内でthis.propsにアクセスできる */
+    super();
+  }
+  render() {
+    const { edit, text, complete } = this.props;
+    /** デザイン的にiconを定義してみる */
+    const icon = complete ? "\u2714" : "\u2716";
+
+    if (edit) {
+      return (<li><input value={text} focus="focused" /></li>)
+    }
+    return (
+      <li>
+        <span>{text}</span>
+        <span>{icon}</span>
+      </li>
+    );
+  }
+}
+```
+
+- 擬似ページとしてFavorite`src/js/pages/Favorites.js`とSetting`src/js/pages/Settings.js`の作成
+```javascript:app-flux/src/js/pages/Favorites.js
+import React from "react";
+
+export default class Favorites extends React.Component {
+  render() {
+    return (
+      <div>
+        <h1>Favorites</h1>
+      </div>
+    );
+  }
+}
+```
+```javascript:app-flux/src/js/pages/Settings.js
+import React from "react";
+
+export default class Settings extends React.Component {
+  render() {
+    return (
+      <div>
+        <h1>Settings</h1>
+      </div>
+    );
+  }
+}
+```
+
+## Storeを作成する
