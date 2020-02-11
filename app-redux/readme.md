@@ -234,3 +234,169 @@ undefined
 > b
 { name: 'Bar', age: 35 }
 ```
+
+## Redux単体の動きを確認する
+
+- プロジェクトの作成
+```sh:
+/app # npm init -y
+/app # npm install --save-dev @babel/core @babel/preset-env @babel/preset-react babel-loader babel-plugin-react-html-attrs webpack webpack-cli webpack-dev-server
+/app # npm install --save-dev redux
+```
+- 注意： "webpack-cli": "^4.0.0-beta.2", Error: Cannot find module 'webpack-cli/bin/config-yargs' （2020-02-11 18:00現在）
+- package.jsonの修正
+```json:package.json
+  "scripts": {
+    "start": "webpack-dev-server --hot --inline --watch-content-base --content-base src",
+```
+- webpack.config.jsの作成
+```js:webpack.config.js
+var debug = process.env.NODE_ENV !== "production";
+var webpack = require('webpack');
+var path = require('path');
+
+module.exports = {
+  context: path.join(__dirname, "src"),
+  entry: "./js/client.js",
+  module: {
+    rules: [{
+      test: /\.jsx?$/,
+      exclude: /(node_modules|bower_components)/,
+      use: [{
+        loader: 'babel-loader',
+        options: {
+          presets: ['@babel/preset-react', '@babel/preset-env']
+        }
+      }]
+    }]
+  },
+  output: {
+    path: __dirname + "/src/",
+    filename: "client.min.js",
+    publicPath: '/'
+  },
+  devServer: {
+    port: 8001, // use any port suitable for your configuration
+    host: '0.0.0.0', // to accept connections from outside container
+    watchOptions: {
+      aggregateTimeout: 500, // delay before reloading
+      poll: 1000 // enable polling since fsevents are not supported in docker
+    },
+    historyApiFallback: true
+  },
+  plugins: debug ? [] : [
+    new webpack.optimize.UglifyJsPlugin({ mangle: false, sourcemap: false }),
+  ],
+};
+```
+- src/index.htmlと空のsrc/js/client.jsファイルを作成
+```html:src/index.html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Redux Tutorials</title>
+  </head>
+  <body>
+    <script src="client.min.js"></script>
+  </body>
+</html>
+```
+- 開発サーバ実行を実行して、Chromeのコンソールを開い状態にしておく
+
+**ReducerとStore**
+
+- `src/js/client.js`でreduxをimportして、ReducerとStoreを作成する
+```js:app-redux/src/js/client.js
+import { createStore } from "redux";
+
+const reducer = () => {
+  console.log("reducer has been called.");
+}
+
+const store = createStore(reducer, 1);
+```
+- `createStore`にReducerとデータの初期値を渡す
+- client.jsを保存してコンソールを確認すると初期値を設定するためにReducerが呼ばれたことが確認できる
+
+**subscribeとdispatch**
+
+- 続いて、`src/js/client.js`内に下記を追加する
+  - Storeが変更された時に呼ばれるsubscribeメソッド
+  - StoreにActionを送信するdispatchメソッドを追加
+```js:app-redux/src/js/client.js
+import { createStore } from "redux";
+
+const reducer = () => {
+  console.log("reducer has been called.");
+}
+
+const store = createStore(reducer, 1);
+
+store.subscribe(() => {
+  console.log("store changed", store.getState());
+})
+
+store.dispatch({type: "INC"});
+```
+- コンソールを確認すると、dispatchするところでも同様にReducerが呼ばれていることが確認できる
+  - reducerは初期処理時とdispatch時の2回呼ばれている
+  - その後に、Storeが変更されたことを検知してsubscribeメソッドが実行されている
+
+**Action**
+- ReducerでActionを受け取り、ActionのTypeごとに処理を分岐させる
+```js:
+import { createStore } from "redux";
+
+const reducer = (state = 0, action) => {
+  console.log("reducer has been called.", state);
+  switch (action.type) {
+    case "INC":
+      return state + 1
+    case "DEC":
+      return state - 1
+  }
+  return state;
+}
+const store = createStore(reducer, 1);
+
+store.subscribe(() => {
+  console.log("store changed", store.getState());
+})
+
+store.dispatch({ type: "INC" });
+store.dispatch({ type: "INC" });
+store.dispatch({ type: "DEC" });
+```
+- dispatch実行 -> reducerで新stateが返される -> subscribeがstateの変更を検知する流れを確認できる
+- 続いて、Actionを拡張してpayloadを追加し、Reducerの中でpayloadで指定した数だけインクリメントやデクリメントできるような処理に改修する
+```js:
+import { createStore } from "redux";
+
+const reducer = (state = 0, action) => {
+  console.log("reducer has been called.", state);
+  switch (action.type) {
+    case "INC":
+      return state + action.payload
+    case "DEC":
+      return state - action.payload
+  }
+  return state;
+}
+const store = createStore(reducer, 1);
+
+store.subscribe(() => {
+  console.log("store changed", store.getState());
+})
+
+store.dispatch({ type: "INC", payload: 3 });
+store.dispatch({ type: "INC", payload: 4 });
+store.dispatch({ type: "DEC", payload: 3 });
+```
+
+- 上記のようにReduxの基本的な流れは以下の通りである
+  - Reducerを作成する
+  - Storeを作成する
+  - ActionをDispatchする
+  - 単一のReducerもしくは複数のReducerが単一のStoreに対して処理を行う
+
+
