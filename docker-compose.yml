@@ -27,11 +27,21 @@ services:
   #   ports: 
   #     - "8001:8001"
 
-  app-flux:
+  # app-flux:
+  #   build: ./
+  #   logging: *default-logging
+  #   volumes:
+  #     - ./app-flux/:/app/
+  #   command: sh
+  #   tty: true
+  #   ports: 
+  #     - "8001:8001"
+
+  app-redux:
     build: ./
     logging: *default-logging
     volumes:
-      - ./app-flux/:/app/
+      - ./app-redux/:/app/
     command: sh
     tty: true
     ports: 
