@@ -399,4 +399,174 @@ store.dispatch({ type: "DEC", payload: 3 });
   - ActionをDispatchする
   - 単一のReducerもしくは複数のReducerが単一のStoreに対して処理を行う
 
+## 複数のReducer
+- Reduxでは複数のReducerを準備して、そのReducerを統合することもできる
+- `src/js/client.js`を複数のReducerで実装しなおしてみる
+```js:
+import { combineReducers, createStore } from "redux"
 
+/** それぞれのReducer */
+const userReducer = (state = {}, action) => {
+  console.log('userReducer', action)
+  switch(action.type) {
+    case "CHANGE_NAME":
+      state.name = action.payload
+      break;
+    case "CHANGE_AGE":
+      state.age = action.payload
+      break;
+  }
+  return state
+}
+const tweetsReducer = (state = [], action) => {
+  console.log('tweetsReducer', action)
+  switch (action.type) {
+    case "ADD_TWEET":
+      state = state.concat({ id: Date.now(), text: action.payload })
+      break;
+  }
+  return state
+}
+
+/** Reducerを統合する */
+const reducers = combineReducers({
+  user: userReducer,
+  tweets: tweetsReducer
+})
+
+/** Storeの作成 */
+// stateデータ例：user: { name: "Tarou", age: 35 } , twiits: []
+const store = createStore(reducers)
+
+/** Subscribeの作成 */
+store.subscribe(() => {
+  console.log("store change", store.getState())
+})
+
+/** Dispatcher */
+store.dispatch({type: "CHANGE_NAME", payload: "Tsutomu"});
+store.dispatch({type: "CHANGE_AGE", payload: 35});
+store.dispatch({type: "ADD_TWEET", payload: "TEST"});
+store.dispatch({type: "ADD_TWEET", payload: "SAMPLE"});
+```
+- 上記のように、`userReducer`と`tweetsReducer`を作成
+- `combineReducers`を使用して、２つのReducerを統合している
+- `combineReducers`には、変更しようとしているStateデータを記述
+  - 今回の場合は、Stateデータはnameとageをもつuser Objectとツイート内容を格納するtweet配列
+  - userReducerとtweetsReducerによって変更される
+- うまく実装できているように見えるが、上記の実装のままだと期待した動作にはならない
+- １回目のuserReducerでreturnしているオブジェクトと、２回目のuserReducerでreturnしているオブジェクトが完全に同一のオブジェクトであるためである
+- また、JavaScriptの非同期性の特性から、`store.subscribe`内にある`console.log`が呼ばれる時点で、userとageがすでに設定されてしまっている
+- つまり、完全に同じオブジェクトを出力してしまっているのである
+- 解決策としては、１回目のuserReducerと２回目のuserReducerで完全に異なるオブジェクトを返してあげるようにすればよい
+- つまり、immutableなJavaScriptが必要になってくる
+  - `state.name = action.payload` のところを `state = {...state, name: action.payload}`に
+  - `state.age = action.payload`のところを`state = { ...state, age: action.payload }`に変更すればよい
+- また、上記の２つのReducerはdispatchが行われるたびに、シーケンシャルに呼ばれていることがログから確認できる
+- `tweersReducer`には処理が実装されていないが、store.dispatchが呼ばれるたびに呼ばれている
+
+## middleware
+
+- Reducerを呼ぶ前に処理をいくつか追加したい要望がある場合に使用する
+  - 例えば、REST APIで動いているバックエンドから、Reducerで処理するためのJSONデータを取得したり、Reducerの処理に入る前後にログ出力など
+- src/js/client.jsをもう一度作り直す
+- middlewareを定義したい場合は、`applyMiddleware`をimportすればよい
+- `applyMiddleware`関数に引数として関数を渡された関数がmiddlewareとしてReduxに認識されるようになる
+```js:
+import { applyMiddleware, createStore } from "redux"
+
+/** インクリメントおよびデクリメントを行うReducer */
+const reducer = (state = 0, action) => {
+  console.log("reducer", action)
+  switch (action.type) {
+    case "INC":
+      state += 1
+      break;
+    case "DEC":
+      state -= 1
+      break;
+  }
+  return state
+}
+
+/** logger関数 */
+const logger = (store) => (next) => (action) => {
+  console.log(action)
+}
+/** logger関数をmiddlewareとして登録 */
+const middleware = applyMiddleware(logger)
+/** storeの作成（およびmiddleware渡す） */
+const store = createStore(reducer, 1, middleware)
+/** storeの変更を検知するsubscribe */
+store.subscribe(() => {
+  console.log("subscribe",store.getState())
+})
+
+store.dispatch({ type: "INC" })
+store.dispatch({ type: "INC" })
+store.dispatch({ type: "DEC" })
+```
+- 今回は、dispatchされるタイミングで呼ばれる想定のlogger関数を用意し、middlewareとして登録
+- `(store) => (next) => (action) => {`の補足
+  ```js:
+    function logger(store) {
+        return function (next) { /** 無名関数 */
+            return function (action) { /** 無名関数 */
+
+            }
+        }
+    }
+  ```
+- 上記の実装のままでは、subscribeがまだ実行されずstateの中身が出力されない
+  - 理由は、ソースコード上ではまだstoreを変更する処理が入っていないため
+- また、dispatchされた後、これまでのサンプルではReducerが呼ばれていたはずなのに呼ばれていない
+  - 理由は、middlewareを使う場合は、middlewareが呼ばれた後にreducerが呼ばれるように、処理の最後に`next(action)`を追加する必要があるため
+  - next()が呼ばれた時の処理の流れ
+  ```
+    +--------------+               +--------------+
+    | middleware01 | -- next() --> | reducer      |
+    +--------------+               +--------------+
+  ```
+- 正式な実装は以下になる
+```js:
+import { applyMiddleware, createStore } from "redux"
+
+/** インクリメントおよびデクリメントを行うReducer */
+const reducer = (state = 0, action) => {
+  console.log("reducer", action)
+  switch (action.type) {
+    case "INC":
+      state += 1
+      break;
+    case "DEC":
+      state -= 1
+      break;
+  }
+  return state
+}
+
+/** logger関数 */
+const logger = (store) => (next) => (action) => {
+  console.log(action)
+  // action.type = "DEC"  ※1
+  next(action)
+}
+/** logger関数をmiddlewareとして登録 */
+const middleware = applyMiddleware(logger)
+/** storeの作成（およびmiddleware渡す） */
+const store = createStore(reducer, 1, middleware)
+/** storeの変更を検知するsubscribe */
+store.subscribe(() => {
+  console.log("subscribe",store.getState())
+})
+
+store.dispatch({ type: "INC" })
+store.dispatch({ type: "INC" })
+store.dispatch({ type: "DEC" })
+```
+- 無事にreducerも呼ばれるようになっていることを確認できる
+- ※1のコメントについて
+  - 出力結果からわかるように、dispatchが行われると`middleware->reducer`の順番で処理が進む
+  - reducerで処理するActionもmiddlewareで見れるようになっている
+  - そのため、※1のコメントアウトを外すと、常にデクリメントの処理が実行された時の結果になってしまう
+  - このように、middleware内で実施した変更がreducerに対して副作用を持たせないように注意

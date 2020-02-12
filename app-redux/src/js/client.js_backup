@@ -1,0 +1,45 @@
+import { combineReducers, createStore } from "redux"
+
+/** それぞれのReducer */
+const userReducer = (state = {}, action) => {
+  console.log('userReducer', action)
+  switch (action.type) {
+    case "CHANGE_NAME":
+      state = { ...state, name: action.payload }
+      break;
+    case "CHANGE_AGE":
+      state = { ...state, age: action.payload }
+      break;
+  }
+  return state
+}
+const tweetsReducer = (state = [], action) => {
+  console.log('tweetsReducer', action)
+  switch (action.type) {
+    case "ADD_TWEET":
+      state = state.concat({ id: Date.now(), text: action.payload })
+      break;
+  }
+  return state
+}
+
+/** Reducerを統合する */
+const reducers = combineReducers({
+  user: userReducer,
+  tweets: tweetsReducer
+})
+
+/** Storeの作成 */
+// stateデータ例：user: { name: "Tarou", age: 35 } , twiits: []
+const store = createStore(reducers)
+
+/** Subscribeの作成 */
+store.subscribe(() => {
+  console.log("store change", store.getState())
+})
+
+/** Dispatcher */
+store.dispatch({ type: "CHANGE_NAME", payload: "Tarou" });
+store.dispatch({ type: "CHANGE_AGE", payload: 35 });
+store.dispatch({type: "ADD_TWEET", payload: "TEST"});
+store.dispatch({type: "ADD_TWEET", payload: "SAMPLE"});
