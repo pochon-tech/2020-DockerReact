@@ -1,46 +1,38 @@
 import { applyMiddleware, createStore } from "redux"
+import axios from "axios"
+/** state監視のLogger */
+import { createLogger } from "redux-logger"
+/** Actionオブジェクトの代わりに関数を呼べるようにする */
+import thunk from "redux-thunk"
 
-/** インクリメントおよびデクリメントを行うReducer */
-const reducer = (state = 0, action) => {
-  console.log("reducer", action)
+const initState = {
+  fetching: false,
+  fetched: false,
+  users: [],
+  error: null
+}
+
+const reducer = (state = initState, action) => {
   switch (action.type) {
-    case "INC":
-      state += 1
-      break;
-    case "DEC":
-      state -= 1
-      break;
-    case "ERR":
-      throw new Error("error")
+    case "START":
+      return { ...state, fetching: true }
+    case "ERROR":
+      return { ...state, fetching: false, error: action.payload }
+    case "RECEIVE":
+      return { ...state, fetching: false, fetched: true, users:action.payload }
   }
   return state
 }
 
-/** logger関数 */
-const logger = (store) => (next) => (action) => {
-  console.log("logger関数", action)
-  // action.type = "DEC"
-  next(action)
-}
-/** Error関数 */
-const error = (store) => (next) => (action) => {
-  console.log("error関数", action)
-  try {
-    next(action)
-  } catch (e) {
-    console.log("Error =>", e)
-  }
-}
-/** logger関数をmiddlewareとして登録 */
-const middleware = applyMiddleware(logger, error)
-/** storeの作成（およびmiddleware渡す） */
-const store = createStore(reducer, 1, middleware)
-/** storeの変更を検知するsubscribe */
-store.subscribe(() => {
-  console.log("subscribe",store.getState())
-})
+const middleware = applyMiddleware(thunk, createLogger())
+const store = createStore(reducer, middleware)
 
-store.dispatch({ type: "INC" })
-store.dispatch({ type: "INC" })
-store.dispatch({ type: "DEC" })
-store.dispatch({ type: "ERR" })
+store.dispatch((dispatch)=>{
+  dispatch({ type: "START" })
+  // async処理
+  axios.get("http://localhost:18080").then((res)=>{
+    dispatch({type: "RECEIVE", payload: res.data })
+  }).catch((e)=>{
+    dispatch({type: "ERROR", payload: e })
+  })
+})

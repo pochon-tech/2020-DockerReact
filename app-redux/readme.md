@@ -625,3 +625,191 @@ store.dispatch({ type: "INC" })
 store.dispatch({ type: "DEC" })
 store.dispatch({ type: "ERR" })
 ```
+
+## 非同期アプリケーション
+
+- middlewareには非同期処理を入れることができる
+- src/js/client.jsを新規に作り直す
+- 練習として、`redux-logger`というDispatchされたActionをconsole上に出力するMiddlewareを使用する
+```sh:
+  /app # npm install --save-dev redux-logger
+```
+```js:
+import { applyMiddleware, createStore } from "redux"
+import { createLogger } from "redux-logger"
+
+const reducer = (state={}, action) => {
+  return state
+}
+
+const middleware = applyMiddleware(createLogger())
+const store = createStore(reducer, middleware)
+
+store.dispatch({ type: "FOO" })
+```
+- Consoleを確認してみると、Actionが起動したときに変更前のstateと変更後のstateを確認することができる
+
+- 続いて、dispatcherを改修する
+- 今までのdispatcherは、データをdispatchしていたが、今回は関数をdispatchする
+- 関数のdispatchにより、先の処理で非同期処理が組み込まれた関数が実行されるような作りにする
+```js:
+import { applyMiddleware, createStore } from "redux"
+import { createLogger } from "redux-logger"
+
+const reducer = (state={}, action) => {
+  return state
+}
+
+const middleware = applyMiddleware(createLogger())
+const store = createStore(reducer, middleware)
+
+store.dispatch((dispatch)=>{
+  dispatch({ type: "START" })
+  // async処理
+  dispatch({ type: "END" })
+})
+```
+- しかし、このままでは下記のようなエラーが発生する
+  - `Actions must be plain objects. Use custom middleware for async actions.`
+  - dispatcherは単純なObjectsが渡されてることを期待しているエラーである
+  - 前回のFluxのおさらいで述べたようにActionはtypeプロパティを持つオブジェクトが期待されているからである
+  - この問題を解消するために、`redux-thunk`を使用する
+- `redux-thunk`とは、ReduxのMiddlewareの一つで、Actionオブジェクトの代わりに関数を返す処理を呼び出すことができるようにするためのMiddlewareである
+- thunkは、storeのdispatchメソッドを受け取り、Actionオブジェクトの代わりに渡された非同期関数処理が官僚した後に、通常の同期処理アクションをディスパッチするために利用される
+```sh:
+/app # npm install --save-prod redux-thunk
+```
+```js:
+import { applyMiddleware, createStore } from "redux"
+/** state監視のLogger */
+import { createLogger } from "redux-logger"
+/** Actionオブジェクトの代わりに関数を呼べるようにする */
+import thunk from "redux-thunk"
+
+const reducer = (state={}, action) => {
+  return state
+}
+
+const middleware = applyMiddleware(thunk, createLogger())
+const store = createStore(reducer, middleware)
+
+store.dispatch((dispatch)=>{
+  dispatch({ type: "START" })
+  // async処理
+  dispatch({ type: "END" })
+})
+```
+- エラー解消されたことを確認できる
+
+## 非同期処理を実装してみる
+
+- 動作確認用のダミーサーバを起動して非同期処理の実装を行う
+- 別ターミナルを立ち上げてダミーサーバーを構築する
+- ダミーサーバー用のソースコードは以下
+```js:
+var http = require('http');
+http.createServer(function (req, res) {
+  res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'});
+  setTimeout(() => res.end('{age: 30, id: 0, name: "foo", age: 25, id: 1, name: "bar"}'), 1000);
+}).listen(18080);
+```
+- client.jsを下記のように修正する
+```js:
+import { applyMiddleware, createStore } from "redux"
+import axios from "axios"
+/** state監視のLogger */
+import { createLogger } from "redux-logger"
+/** Actionオブジェクトの代わりに関数を呼べるようにする */
+import thunk from "redux-thunk"
+
+const initState = {
+  fetching: false,
+  fetched: false,
+  users: [],
+  error: null
+}
+
+const reducer = (state = initState, action) => {
+  switch (action.type) {
+    case "START":
+      return { ...state, fetching: true }
+    case "ERROR":
+      return { ...state, fetching: false, error: action.payload }
+    case "RECEIVE":
+      return { ...state, fetching: false, fetched: true, users:action.payload }
+  }
+  return state
+}
+
+const middleware = applyMiddleware(thunk, createLogger())
+const store = createStore(reducer, middleware)
+
+store.dispatch((dispatch)=>{
+  dispatch({ type: "START" })
+  // async処理
+  axios.get("http://localhost:18080").then((res)=>{
+    dispatch({type: "RECEIVE", payload: res.data })
+  }).catch((e)=>{
+    dispatch({type: "ERROR", payload: e })
+  })
+})
+```
+- HTTP Clientとして`axios`を使用している
+- stateの初期値の定義を追加している
+- Reducerに各Actionタイプごとにstateを書き換える処理を追加している
+  - 実際のアプリケーション開発では時間のかかる非同期処理に対し"START"(処理中)と"RECEIVE"(処理完了)の２つのActionを用いることで、処理完了までのプログレスバーを表示させるような事も実現できる
+
+**Tips DockerのEXPOSEについて**
+
+- 別ターミナルを起動し、ダミーサーバーを以下のように立ち上げる
+```sh:
+apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-redux sh
+/app # node
+> var http = require('http');
+undefined
+> http.createServer(function (req, res) {
+...   res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'});
+...   setTimeout(() => res.end('{age: 30, id: 0, name: "foo", age: 25, id: 1, name: "bar"}'), 1000);
+... }).listen(18080);
+```
+- さらに別ターミナルを起動して、ダミーサーバーが起動しているかcurlで確認してみる
+```sh:
+apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-redux sh
+/app # curl localhost:18080
+{age: 30, id: 0, name: "foo", age: 25, id: 1, name: "bar"}
+```
+- では、ブラウザから確認してみたときはどうか？
+```
+GET http://localhost:18080/ net::ERR_CONNECTION_REFUSED
+```
+- 接続エラーが起きてしまっている
+- この接続エラーは、外部（ホスト側ブラウザ）からのアクセスを許可しておく必要があるためである
+- 下記のようにdocker-compose.ymlを修正して立ち上げ直すことで解決する
+```yaml:docker-compose.yml
+  app-redux:
+    build: ./
+    logging: *default-logging
+    volumes:
+      - ./app-redux/:/app/
+    command: sh
+    tty: true
+    ports: 
+      - "8001:8001"
+      - "18080:18080"
+```
+- portsには、ホスト・ゲスト間で通信が必要な場合はポートを指定する
+
+**DockerfileのEXPOSE命令は必要はない？**
+- 結論からいうと、どのポートに接続するのかを明示しておけば、このイメージでは何番ポートが実行されているか利用者に分かりやすい点で考えるなら記述しても良いが別にいらない
+- DockerfileのEXPOSE命令は実際に何かのポートを開けているわけではない
+- Docker Documentation のEXPORTの項目に下記のような記載がある
+> The EXPOSE instruction does not actually publish the port. 
+> It functions as a type of documentation between the person who builds the image and the person who runs the container, 
+> about which ports are intended to be published. To actually publish the port when running the container,
+> use the -p flag on docker run to publish and map one or more ports, or the -P flag to publish all exposed ports and map them to high-order ports.
+- つまり、EXPOSE命令は文書（docker inspectで確認できる）であり実際には開放していない (記述しなくてもポートは公開できる)
+- また、実際の開放（ホストとのマッピング）は、docker-compose.ymlのportsで行っている
+- 下記の理由からEXPOSEは省略してしまってよいと考える
+  - 環境の利用者が限られる
+  - この環境はdocker-compose.ymlによる環境で構築されているのでコンテナ間のリンクもサービス名指定で問題ない
+  - Dockerfileを単独で使用することはない

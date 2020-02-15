@@ -46,3 +46,4 @@ services:
     tty: true
     ports: 
       - "8001:8001"
+      - "18080:18080"

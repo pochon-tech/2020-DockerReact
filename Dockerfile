@@ -4,6 +4,7 @@ ENV APP_PORT 8001
 ENV APP_ROOT /app
 EXPOSE $APP_PORT
 WORKDIR $APP_ROOT
+
 CMD [ "sh" ]
 
 RUN apk update && \
