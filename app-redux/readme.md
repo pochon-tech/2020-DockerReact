@@ -570,3 +570,58 @@ store.dispatch({ type: "DEC" })
   - reducerで処理するActionもmiddlewareで見れるようになっている
   - そのため、※1のコメントアウトを外すと、常にデクリメントの処理が実行された時の結果になってしまう
   - このように、middleware内で実施した変更がreducerに対して副作用を持たせないように注意
+
+## 複数のmiddleware
+
+- applyMiddlewareでは複数のmiddlewareを登録できる
+- 複数の場合は、第１引数に指定した関数を１番最初に実行した後、その中で`next()`を呼び出していれば第２引数移行の関数を順次実行する
+- 最後の関数で`next()`が呼ばれると、処理はreducerに渡される
+
+```js:
+import { applyMiddleware, createStore } from "redux"
+
+/** インクリメントおよびデクリメントを行うReducer */
+const reducer = (state = 0, action) => {
+  console.log("reducer", action)
+  switch (action.type) {
+    case "INC":
+      state += 1
+      break;
+    case "DEC":
+      state -= 1
+      break;
+    case "ERR":
+      throw new Error("error")
+  }
+  return state
+}
+
+/** logger関数 */
+const logger = (store) => (next) => (action) => {
+  console.log("logger関数", action)
+  // action.type = "DEC"
+  next(action)
+}
+/** Error関数 */
+const error = (store) => (next) => (action) => {
+  console.log("error関数", action)
+  try {
+    next(action)
+  } catch (e) {
+    console.log("Error =>", e)
+  }
+}
+/** logger関数をmiddlewareとして登録 */
+const middleware = applyMiddleware(logger, error)
+/** storeの作成（およびmiddleware渡す） */
+const store = createStore(reducer, 1, middleware)
+/** storeの変更を検知するsubscribe */
+store.subscribe(() => {
+  console.log("subscribe",store.getState())
+})
+
+store.dispatch({ type: "INC" })
+store.dispatch({ type: "INC" })
+store.dispatch({ type: "DEC" })
+store.dispatch({ type: "ERR" })
+```
