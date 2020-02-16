@@ -37,13 +37,25 @@ services:
   #   ports: 
   #     - "8001:8001"
 
-  app-redux:
+  # app-redux:
+  #   build: ./
+  #   logging: *default-logging
+  #   volumes:
+  #     - ./app-redux/:/app/
+  #   command: sh
+  #   tty: true
+  #   ports: 
+  #     - "8001:8001"
+  #     - "18080:18080"
+
+  app-redux2:
     build: ./
     logging: *default-logging
     volumes:
-      - ./app-redux/:/app/
+      - ./app-redux2/:/app/
     command: sh
     tty: true
     ports: 
       - "8001:8001"
       - "18080:18080"
+        

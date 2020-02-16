@@ -14,6 +14,7 @@ app-basic/node_modules
 app-router/node_modules
 app-flux/node_modules
 app-redux/node_modules
+app-redux2/node_modules
 bower_components
 *.sublime*
 
