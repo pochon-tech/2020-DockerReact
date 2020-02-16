@@ -813,3 +813,85 @@ GET http://localhost:18080/ net::ERR_CONNECTION_REFUSED
   - 環境の利用者が限られる
   - この環境はdocker-compose.ymlによる環境で構築されているのでコンテナ間のリンクもサービス名指定で問題ない
   - Dockerfileを単独で使用することはない
+
+## redux-promiseを使う
+
+- ReduxでActionを処理に非同期処理、ajaxを使おうとすると書き方が複雑になってしまう
+- `redux-promise`というミドルウェアを使うときれいに書くことができる
+```sh:
+/app # npm install --save-dev redux-promise-middleware
+```
+- **注意点:ver6から書き方が変更になっている**
+- 以前の書き方
+```js:
+import { applyMiddleware, createStore } from "redux"
+import axios from "axios"
+import { createLogger } from "redux-logger"
+import promise from "redux-promise-middleware"
+
+const initState = {
+  fetching: false,
+  fetched: false,
+  users: [],
+  error: null
+}
+
+const reducer = (state = initState, action) => {
+  switch (action.type) {
+    case "FETCH_PENDING":
+      return { ...state, fetching: true }
+    case "FETCH_REJECTED":
+      return { ...state, fetching: false, error: action.payload }
+    case "FETCH_FULFILLED":
+      return { ...state, fetching: false, fetched: true, users:action.payload }
+  }
+  return state
+}
+
+const middleware = applyMiddleware(promise(), createLogger())
+const store = createStore(reducer, middleware)
+
+store.dispatch({
+  type:"FETCH",
+  payload: axios.get("http://localhost:18080")
+})
+```
+- 以前の書き方では、`store.dispatch`で指定したActionTypeをPrefixにして下記のようなsuffixを追加してActionTypeを発行
+  - *_PENDING(非同期処理未完了状態)
+  - *_ERROR(非同期処理エラー)
+  - *_FULFILLED(非同期処理正常終了)
+- Ver6以降は下記のような書き方に統一された
+```js:
+import { applyMiddleware, createStore } from "redux"
+import axios from "axios"
+import { createLogger } from "redux-logger"
+import { createPromise } from "redux-promise-middleware"
+
+const initState = {
+  fetching: false,
+  fetched: false,
+  users: [],
+  error: null
+}
+
+const reducer = (state = initState, action) => {
+  switch (action.type) {
+    case "FETCH_PENDING":
+      return { ...state, fetching: true }
+    case "FETCH_REJECTED":
+      return { ...state, fetching: false, error: action.payload }
+    case "FETCH_FULFILLED":
+      return { ...state, fetching: false, fetched: true, users:action.payload }
+  }
+  return state
+}
+
+const promise = createPromise({ type: { fulfilled: 'success' } })
+const middleware = applyMiddleware(promise, createLogger())
+const store = createStore(reducer, middleware)
+
+store.dispatch({
+  type:"FETCH",
+  payload: axios.get("http://localhost:18080")
+})
+```

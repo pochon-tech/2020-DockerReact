@@ -1,9 +1,7 @@
 import { applyMiddleware, createStore } from "redux"
 import axios from "axios"
-/** state監視のLogger */
 import { createLogger } from "redux-logger"
-/** Actionオブジェクトの代わりに関数を呼べるようにする */
-import thunk from "redux-thunk"
+import { createPromise } from "redux-promise-middleware"
 
 const initState = {
   fetching: false,
@@ -14,25 +12,21 @@ const initState = {
 
 const reducer = (state = initState, action) => {
   switch (action.type) {
-    case "START":
+    case "FETCH_PENDING":
       return { ...state, fetching: true }
-    case "ERROR":
+    case "FETCH_REJECTED":
       return { ...state, fetching: false, error: action.payload }
-    case "RECEIVE":
+    case "FETCH_FULFILLED":
       return { ...state, fetching: false, fetched: true, users:action.payload }
   }
   return state
 }
 
-const middleware = applyMiddleware(thunk, createLogger())
+const promise = createPromise({ type: { fulfilled: 'success' } })
+const middleware = applyMiddleware(promise, createLogger())
 const store = createStore(reducer, middleware)
 
-store.dispatch((dispatch)=>{
-  dispatch({ type: "START" })
-  // async処理
-  axios.get("http://localhost:18080").then((res)=>{
-    dispatch({type: "RECEIVE", payload: res.data })
-  }).catch((e)=>{
-    dispatch({type: "ERROR", payload: e })
-  })
+store.dispatch({
+  type:"FETCH",
+  payload: axios.get("http://localhost:18080")
 })
