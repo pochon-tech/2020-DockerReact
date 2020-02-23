@@ -14,6 +14,7 @@ module.exports = {
         loader: 'babel-loader',  // ビルドで使用するloaderを指定
         options: {
           plugins: [
+            /** JSX内でもHTML属性のclassキーワードを使えるようにする */
             'react-html-attrs',
             /** @babel/plugin-proposal-decoratorsでlegacyフラグを付けた場合、引数にクラスとプロパティ名そしてプロパティディスクリプタを受け取り、そのプロパティディスクリプタを加工して返すようになる */
             [require('@babel/plugin-proposal-decorators'), {legacy: true}]

@@ -43,6 +43,7 @@ export default function reducer(state={
         tweets: state.tweets.filter(tweet => tweet.id !== action.payload )
       }
     }
-    
   }
+
+  return state
 }

@@ -10,6 +10,7 @@ apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-redux2 s
 >         webpack webpack-cli webpack-dev-server \
 >         react react-dom react-redux react-router react-router-dom \
 >         redux redux-logger redux-promise-middleware redux-thunk \
+>         babel-plugin-react-html-attrs
 >         axios
 ```
 - 前回からの追加で導入しているパッケージ`@babel/plugin-proposal-decorators`は、ES6のdecorator構文を使用するため
@@ -38,6 +39,7 @@ apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-redux2 s
           loader: 'babel-loader',  // ビルドで使用するloaderを指定
           options: {
             plugins: [
+              /** JSX内でもHTML属性のclassキーワードを使えるようにする */
               'react-html-attrs',
               /** @babel/plugin-proposal-decoratorsでlegacyフラグを付けた場合、引数にクラスとプロパティ名そしてプロパティディスクリプタを受け取り、そのプロパティディスクリプタを加工して返すようになる */
               [require('@babel/plugin-proposal-decorators'), {legacy: true}]
@@ -409,6 +411,135 @@ ReactDOM.render(
 
 ### コンポーネントの作成
 
+**storeをprops経由で呼び出してみる**
 - 仮で作成していた`/src/js/components/Layout.js`を完成させて、レンダリング処理を記述する
+- client.jsとは別のコンポーネントでReduxを使用する場合は、`connect`をインポートする必要がある
+```js:
+import React from "react"
+import { connect } from "react-redux"
 
+@connect()
+export default class Layout extends React.Component {
+  render () {
+    /** 仮でnullを返すようにしている何もないコンポーネント */
+    return null
+  }
+}
+```
+- @で続く記述はデコレータ
+- package.jsonの`babel-plugin-transform-decorators-legacy`パッケージによって変換されるのでwebpack.config.jsで有効にしておく必要がある
+- VSCODE上だとWarningが出るが、消すためにはプロジェクト直下に`jsconfig.json`を配置しておく必要がある
+  ```json:
+  {
+    "compilerOptions": {
+      "experimentalDecorators": true
+    }
+  }
+  ```
+  - 上記のファイルを配置した後、VSCODEをリロードすると警告が消える
+- このconnectデコレータは、ReactとReduxStoreを接続する役割を持っている
+- 引数にstateをpropsと対応づける関数と、dispatchをpropsに対応づける関数を指定することができる
+- そして、connectデコレータで実行される一つ目の関数はpropsとしてstoreの値を取得する関数であり、返り値としてstateのkeyを指定することで、connectされたクラスのthis.propsからstateの値を取得することができる
+- 具体的な処理を下記で確認してみる
+```js:
+import React from "react"
+import { connect } from "react-redux"
 
+@connect((store)=>{
+  return {
+    user: store.userReducer.user
+  }
+})
+export default class Layout extends React.Component {
+  render () {
+    console.log(this.props.user)
+    return null
+  }
+}
+```
+- Layoutコンポーネントのクラス内でthis.propsを通じて、userオブジェクトが出力されているこをが確認できる
+- このオブジェクトは`src/js/reducers/userReducer.js`で定義したものになる
+
+**ActionCreatorをprops経由で呼び出してみる**
+- user情報の取得も行ってみる
+```js:
+import React from "react"
+import { connect } from "react-redux"
+
+import { fetchUser } from "../actions/userActions"
+
+@connect((store)=>{
+  return {
+    user: store.userReducer.user,
+    userFetched: store.userReducer.fetched
+  }
+})
+export default class Layout extends React.Component {
+  componentDidMount() {
+    this.props.dispatch(fetchUser())
+  }
+  render () {
+    console.log(this.props.user)
+    console.log(this.props.userFetched)
+    return null
+  }
+}
+```
+- 下記の通り、dispatch前と後でstateが変わっていることが確認できる
+  <img src="cap-1.png" />
+- fetchUser()関数は、actionType(type: "FETCH_USER_FULFILLED")なオブジェクトを返す関数なので、それがdispatcherに渡されてreducerが実行される
+- このfetchUser()関数のことを`ActionCreator`と呼ぶ
+- つまり、これまでに作成していた`actions`ディレクトリ内の関数群は、`ActionCreator`の集まり
+- actionTypeなオブジェクトを処理するのは、dispatcherを経由したReducerなので、`src/js/reducers/userReducer.js`に書いてある
+- あとは、render()メソッドで`return <h1>{this.props.user.name}</h1>`のようにHTMLレンダリングの処理を書けばstateが画面に表示される
+
+**非同期な処理も経由してみる**
+- Layoutコンポーネントで非同期なTweets情報の取得を行ってみる
+- まずは、別のターミナルでダミーサーバーを立てる
+```sh:
+/app # node
+> var http = require('http');
+undefined
+> http.createServer(function (req, res) {
+...   res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'});
+...   setTimeout(() => res.end('[{"id": 0, "text": "My first tweet."}, {"id": 1, "text": "Good afternoon."}]'), 1000);
+... }).listen(18080);
+```
+- 続いて、StoreのStateであるTweetsをコンポーネント内のProps経由で使用できるように、@connectに処理を追記
+- ActionCreatorであるfetchTweetsを読み込み
+- Tweets配列が空の場合は、fetch用のボタンを表示して、空でなければ一覧として表示する処理を追加する
+```js:
+import React from "react"
+import { connect } from "react-redux"
+
+import { fetchUser } from "../actions/userActions"
+import { fetchTweets } from "../actions/tweetsActions"
+
+@connect((store)=>{
+  return {
+    user: store.userReducer.user,
+    userFetched: store.userReducer.fetched,
+    tweets: store.tweetsReducer.tweets
+  }
+})
+export default class Layout extends React.Component {
+  componentDidMount() {
+    this.props.dispatch(fetchUser())
+  }
+  fetchTweets() {
+    this.props.dispatch(fetchTweets())
+  }
+  render () {
+    const { user, tweets } = this.props
+    console.log(tweets)
+    if (! tweets.length) return <button onClick={this.fetchTweets.bind(this) } >Tweetを読み込む</button>
+    const mappedTweets = tweets.map((tweet)=> <li key={tweet.id}> {tweet.text} </li>)
+    return (
+      <div>
+        <h1>{user.name}</h1>
+        <ul>{mappedTweets}</ul>
+      </div>
+    )
+  }
+}
+```
