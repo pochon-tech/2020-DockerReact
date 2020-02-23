@@ -387,6 +387,10 @@ apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-redux2 s
   - `react-redux`をwrapする
   - 作成したstoreのインポート
   - storeをProviderコンポーネントのpropsとして定義
+
+<details>
+<summary>src/js/client.js</summary>
+
 ```js:
 import React from "react"
 import ReactDOM from "react-dom"
@@ -407,6 +411,8 @@ ReactDOM.render(
     <Layout />
   </Provider>, app)
 ```
+</details>
+
 - 以上で、接続部分が改修完了 = 様々なcomponentからstoreが変更されたことを検知して随時画面をレンダリングする準備ができた
 
 ### コンポーネントの作成
@@ -414,6 +420,7 @@ ReactDOM.render(
 **storeをprops経由で呼び出してみる**
 - 仮で作成していた`/src/js/components/Layout.js`を完成させて、レンダリング処理を記述する
 - client.jsとは別のコンポーネントでReduxを使用する場合は、`connect`をインポートする必要がある
+
 ```js:
 import React from "react"
 import { connect } from "react-redux"
@@ -440,7 +447,10 @@ export default class Layout extends React.Component {
 - このconnectデコレータは、ReactとReduxStoreを接続する役割を持っている
 - 引数にstateをpropsと対応づける関数と、dispatchをpropsに対応づける関数を指定することができる
 - そして、connectデコレータで実行される一つ目の関数はpropsとしてstoreの値を取得する関数であり、返り値としてstateのkeyを指定することで、connectされたクラスのthis.propsからstateの値を取得することができる
-- 具体的な処理を下記で確認してみる
+
+<details>
+<summary>src/js/components/Layout.js</summary>
+
 ```js:
 import React from "react"
 import { connect } from "react-redux"
@@ -457,11 +467,17 @@ export default class Layout extends React.Component {
   }
 }
 ```
+</details>
+
 - Layoutコンポーネントのクラス内でthis.propsを通じて、userオブジェクトが出力されているこをが確認できる
 - このオブジェクトは`src/js/reducers/userReducer.js`で定義したものになる
 
 **ActionCreatorをprops経由で呼び出してみる**
 - user情報の取得も行ってみる
+
+<details>
+<summary>src/js/components/Layout.js</summary>
+
 ```js:
 import React from "react"
 import { connect } from "react-redux"
@@ -485,6 +501,8 @@ export default class Layout extends React.Component {
   }
 }
 ```
+</details>
+
 - 下記の通り、dispatch前と後でstateが変わっていることが確認できる
   <img src="cap-1.png" />
 - fetchUser()関数は、actionType(type: "FETCH_USER_FULFILLED")なオブジェクトを返す関数なので、それがdispatcherに渡されてreducerが実行される
@@ -508,6 +526,10 @@ undefined
 - 続いて、StoreのStateであるTweetsをコンポーネント内のProps経由で使用できるように、@connectに処理を追記
 - ActionCreatorであるfetchTweetsを読み込み
 - Tweets配列が空の場合は、fetch用のボタンを表示して、空でなければ一覧として表示する処理を追加する
+
+<details>
+<summary>src/js/components/Layout.js</summary>
+
 ```js:
 import React from "react"
 import { connect } from "react-redux"
@@ -543,3 +565,52 @@ export default class Layout extends React.Component {
   }
 }
 ```
+</details>
+
+**ロード中のメッセージを表示してみる**
+- 本番用のプログラムでこのサーバからのレスポンスを待っている時間に`Loading...`なメッセージを表示させてみる
+<details>
+<summary>src/js/components/Layout.js</summary>
+
+```js:
+import React from "react"
+import { connect } from "react-redux"
+
+import { fetchUser } from "../actions/userActions"
+import { fetchTweets } from "../actions/tweetsActions"
+
+@connect((store)=>{
+  return {
+    user: store.userReducer.user,
+    userFetched: store.userReducer.fetched,
+    tweets: store.tweetsReducer.tweets,
+    tweetsFetching: store.tweetsReducer.fetching
+  }
+})
+export default class Layout extends React.Component {
+  componentDidMount() {
+    this.props.dispatch(fetchUser())
+  }
+  fetchTweets() {
+    this.props.dispatch(fetchTweets())
+  }
+  render () {
+    const { user, tweets, tweetsFetching } = this.props
+
+    if (tweetsFetching === true) return <div>Loading...</div>
+    if (! tweets.length) return <button onClick={this.fetchTweets.bind(this) } >Tweetを読み込む</button>
+    const mappedTweets = tweets.map((tweet)=> <li key={tweet.id}> {tweet.text} </li>)
+    return (
+      <div>
+        <h1>{user.name}</h1>
+        <ul>{mappedTweets}</ul>
+      </div>
+    )
+  }
+}
+```
+</details>
+
+- 予めActionCreatorであるfetchTweets()では、`dispatch({type: "FETCH_TWEETS"})`とdispatchしており、リクエストを送信する前から、リクエストの送信が完了するまでの間に、一時的にstateを変更する処理を実装している
+- これを利用することで、ボタンを押してから完了するまでの間を`Loading...`というメッセージを表示している
+- `@connect`に、stateの`tweetsFetching`を追加して、レンダリングの条件を追加するだけで実装が完了する
