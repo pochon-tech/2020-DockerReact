@@ -116,7 +116,7 @@ apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-redux2 s
   ```
   </details>
 
-- `src/js/components/Layout.js`を作成する
+- `src/js/components/Layout.js`を仮で作成する
   <details>
   <summary>src/js/components/Layout.js</summary>
 
@@ -381,8 +381,34 @@ apple@appurunoMacBook-Pro 2020-02-DockerReact % docker-compose exec app-redux2 s
 
 - Reduxに接続するためには`react-redux`をインストールしておく必要がある
 - インストールしたら、トップレベルコンポーネント(`src/js/client.js`)を下記のように修正する
+  - `react-redux`の読み込み
+  - `react-redux`をwrapする
+  - 作成したstoreのインポート
+  - storeをProviderコンポーネントのpropsとして定義
 ```js:
+import React from "react"
+import ReactDOM from "react-dom"
 
+import { Provider } from "react-redux"
+
+/** ページ(<div id="app"></div>内)全体のレイアウト */
+import Layout from "./components/Layout"
+import store from "./store"
+
+/** SPAを埋め込む場所 */
+const app = document.getElementById('app')
+
+/** Layoutコンポーネントをレンダリングする */
+// ReactDOM.render(<Layout />, app)
+ReactDOM.render(
+  <Provider store={ store }>
+    <Layout />
+  </Provider>, app)
 ```
+- 以上で、接続部分が改修完了 = 様々なcomponentからstoreが変更されたことを検知して随時画面をレンダリングする準備ができた
+
+### コンポーネントの作成
+
+- 仮で作成していた`/src/js/components/Layout.js`を完成させて、レンダリング処理を記述する
 
 
