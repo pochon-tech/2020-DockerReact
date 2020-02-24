@@ -131,8 +131,7 @@ CREATE TABLE `users` (
 
 ```sh:
 apple@appurunoMacBook-Pro react-php-project % docker-compose exec mysql bash
-root@90ff1349b046:/# mysql -uuser -ppass
-mysql> use db;
+root@90ff1349b046:/# mysql -uuser -ppass -Ddb
 mysql> CREATE TABLE `users` (
     ->   `id` int(11) NOT NULL AUTO_INCREMENT,
     ->   `user_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -171,6 +170,34 @@ mysql> desc users;
 
 - 試しに`www/html/`にディレクトリを切って、下記のような`test.php`を配置する
 ```php:
+<?php phpinfo();
+```
+- localhostをブラウザから確認してみるも、`You don't have permission to access this resource.`と403エラーが返ってくる場合は下記を参考にすると良い
+```sh:
+apple@appurunoMacBook-Pro react-php-project % docker-compose exec www bash
 
+# 権限の確認
+root@e210de531d8a:/var/www# ls -la
+total 4
+drwxr-xr-x 4 root root  128 Feb 24 13:49 .
+drwxr-xr-x 1 root root 4096 Feb  1 19:26 ..
+drwxr-xr-x 3 root root   96 Feb 24 13:49 html
+drwxr-xr-x 2 root root   64 Feb 24 09:42 php.ini
+
+# OSの確認
+root@e210de531d8a:/etc# cat /etc/debian_version 
+10.2
+
+# 'apache2'サービスに使用されるユーザ名を探す
+root@e210de531d8a:/etc# cat /etc/apache2/envvars
+# /etc/init.d/apache2, /etc/logrotate.d/apache2, etc.
+: ${APACHE_RUN_USER:=www-data}
+export APACHE_RUN_USER
+: ${APACHE_RUN_GROUP:=www-data}
+export APACHE_RUN_GROUP
+
+# Debine系のApache実行ユーザは「www-data」でありuid:gid=33:33
+root@e210de531d8a:/var/www/html# id www-data
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
 ```
 </details>
