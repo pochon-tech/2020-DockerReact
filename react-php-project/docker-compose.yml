@@ -1,0 +1,50 @@
+version: '3.4'
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100k"
+    max-file: "3"
+volumes:
+  mysql_data: { driver: local }
+services:
+
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+      TZ: 'Asia/Tokyo'
+    volumes:
+    - mysql_data:/var/lib/mysql
+
+  www:
+    build:
+      context: .
+      dockerfile: Dockerfile-php
+    logging: *default-logging
+    volumes:
+    - ./www:/var/www
+    - ./www/php.ini:/usr/local/etc/php/php.ini
+    environment:
+    - DB_CONNECTION=mysql
+    - DB_HOST=mysql
+    - DB_DATABASE=db
+    - DB_USERNAME=user
+    - DB_PASSWORD=password
+    ports: 
+    - "80:80"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile-node
+    logging: *default-logging
+    volumes:
+    - ./app/:/app/
+    command: sh
+    tty: true
+    ports: 
+    - "8001:8001"
