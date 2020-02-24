@@ -201,3 +201,47 @@ root@e210de531d8a:/var/www/html# id www-data
 uid=33(www-data) gid=33(www-data) groups=33(www-data)
 ```
 </details>
+
+**db_connection.phpの作成**
+
+- PHPでMySQLサーバーへ接続するファイルを作成する
+```php:www/html/db_connection.php
+<?php
+<?php
+$db_conn = mysqli_connect("mysql","user","pass","db");
+if (!$db_conn) {
+    echo "Error: Unable to connect to MySQL." . PHP_EOL;
+    echo "Debugging errno: " . mysqli_connect_errno() . PHP_EOL;
+    echo "Debugging error: " . mysqli_connect_error() . PHP_EOL;
+    exit;
+}
+
+echo "Success: A proper connection to MySQL was made! The my_db database is great." . PHP_EOL;
+echo "Host information: " . mysqli_get_host_info($db_conn) . PHP_EOL;
+
+mysqli_close($db_conn);
+```
+
+<details>
+<summary>Call to undefined function mysqli_connect()が発生してエラー落ちする場合</summary>
+
+- php-mysqliモジュールをインストールしていない事が原因
+- 解決策1： mysqli関数を使えるようにdockerfileを以下のように書き換えてbuildし直す
+```Dockerfile:
+FROM php:7.3-apache
+RUN apt-get update && docker-php-ext-install mysqli pdo_mysql
+```
+- 解決策2： コンテナの中に入ってモジュールをインストールしてコンテナの再起動
+```sh:
+apple@appurunoMacBook-Pro react-php-project % docker-compose exec www bash
+root@b0fcc5b5e447:/var/www# docker-php-ext-install mysqli
+apple@appurunoMacBook-Pro react-php-project % docker-compose restart  
+```
+
+- DockerHubで提供されているPHPのイメージでは、PHPの拡張機能をインストールするためのスクリプト(`docker-php-ext-*`)が使用できる
+  - 公式レポジトリ：https://github.com/docker-library/php/tree/1eb2c0ab518d874ab8c114c514e16aa09394de14/7.3/stretch/apache
+  - 引数を元によしなにPHP拡張昨日なモジュールをインストールしてくれる
+  - docker-php-ext-configure：引数を元にphpizeやconfigure実行してくれる
+  - docker-php-ext-install：引数を元にエクステンションをインストールしてくれる
+  - docker-php-ext-enable：引数を元にエクステンションを有効にしてくれる
+</details>
