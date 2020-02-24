@@ -48,14 +48,23 @@ services:
   #     - "8001:8001"
   #     - "18080:18080"
 
-  app-redux2:
+  # app-redux2:
+  #   build: ./
+  #   logging: *default-logging
+  #   volumes:
+  #     - ./app-redux2/:/app/
+  #   command: sh
+  #   tty: true
+  #   ports: 
+  #     - "8001:8001"
+  #     - "18080:18080"
+        
+  app-react-typescript:
     build: ./
     logging: *default-logging
     volumes:
-      - ./app-redux2/:/app/
+      - ./app-react-typescript/:/app/
     command: sh
     tty: true
     ports: 
       - "8001:8001"
-      - "18080:18080"
-        

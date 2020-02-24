@@ -14,3 +14,5 @@ docker-compose: version 1.25.2
 - app-router: React Routerの基本、記事リストの作成
 - app-flux: Fluxによる開発の基本、TODOアプリの作成
 - app-redux: Reduxによる開発の基本
+- app-redux2: Reduxによるアプリケーション作成
+- app-redux-typescript: React&Redux&TypeScript環境の立ち上げ
