@@ -207,19 +207,18 @@ uid=33(www-data) gid=33(www-data) groups=33(www-data)
 - PHPでMySQLサーバーへ接続するファイルを作成する
 ```php:www/html/db_connection.php
 <?php
-<?php
 $db_conn = mysqli_connect("mysql","user","pass","db");
-if (!$db_conn) {
-    echo "Error: Unable to connect to MySQL." . PHP_EOL;
-    echo "Debugging errno: " . mysqli_connect_errno() . PHP_EOL;
-    echo "Debugging error: " . mysqli_connect_error() . PHP_EOL;
-    exit;
-}
+// if (!$db_conn) {
+//     echo "Error: Unable to connect to MySQL." . PHP_EOL;
+//     echo "Debugging errno: " . mysqli_connect_errno() . PHP_EOL;
+//     echo "Debugging error: " . mysqli_connect_error() . PHP_EOL;
+//     exit;
+// }
 
-echo "Success: A proper connection to MySQL was made! The my_db database is great." . PHP_EOL;
-echo "Host information: " . mysqli_get_host_info($db_conn) . PHP_EOL;
+// echo "Success: A proper connection to MySQL was made! The my_db database is great." . PHP_EOL;
+// echo "Host information: " . mysqli_get_host_info($db_conn) . PHP_EOL;
 
-mysqli_close($db_conn);
+// mysqli_close($db_conn);
 ```
 
 <details>
@@ -245,3 +244,221 @@ apple@appurunoMacBook-Pro react-php-project % docker-compose restart
   - docker-php-ext-install：引数を元にエクステンションをインストールしてくれる
   - docker-php-ext-enable：引数を元にエクステンションを有効にしてくれる
 </details>
+
+
+**CRUD系のファイルの作成**
+
+- ユーザを追加するファイル`src/html/add-user.php`を作成する
+```php:add-user.php
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: access");
+header("Access-Control-Allow-Methods: POST");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+require 'db_connection.php';
+
+// post
+$data = json_decode(file_get_contents("php://input"));
+
+if (isset($data->user_name)
+    && isset($data->user_email) 
+	&& !empty(trim($data->user_name)) 
+	&& !empty(trim($data->user_email))
+	){
+    // エスケープ 
+    $username = mysqli_real_escape_string($db_conn, trim($data->user_name));
+    $useremail = mysqli_real_escape_string($db_conn, trim($data->user_email));
+    // Validate Email
+    if (filter_var($useremail, FILTER_VALIDATE_EMAIL)) {
+        // DBへ登録、返り値はbool
+        $insertUser = mysqli_query($db_conn,"INSERT INTO `users`(`user_name`,`user_email`) VALUES('$username','$useremail')");
+        if ($insertUser){
+            // 直近のクエリで使用した自動生成のID
+            $last_id = mysqli_insert_id($db_conn);
+            echo json_encode(["success"=>1,"msg"=>"User Inserted.","id"=>$last_id]);
+        } else {
+            echo json_decode(["success"=>0,"msg"=>"User Not Inserted!"]);
+        }
+    } else{
+        echo json_encode(["success"=>0,"msg"=>"Invalid Email Address!"]);
+    }
+} else {
+    echo json_encode(["success"=>0,"msg"=>"Please fill all the required fields!"]);
+}
+mysqli_close($db_conn);
+```
+
+- ユーザを全件取得するファイル`src/html/all-users.php`を作成する
+```php:all-users.php
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: access");
+header("Access-Control-Allow-Methods: POST");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+require 'db_connection.php';
+
+$allUsers = mysqli_query($db_conn,"SELECT * FROM `users`");
+if (mysqli_num_rows($allUsers) > 0){
+    $all_users = mysqli_fetch_all($allUsers,MYSQLI_ASSOC);
+    echo json_encode(["success"=>1,"users"=>$all_users]);
+} else {
+    echo json_encode(["success"=>0]);
+}
+mysqli_close($db_conn);
+```
+
+- ユーザを更新するファイル`src/html/update-user.php`を作成する
+```php:update-user.php
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: access");
+header("Access-Control-Allow-Methods: POST");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+require 'db_connection.php';
+
+$data = json_decode(file_get_contents("php://input"));
+
+if(isset($data->id) 
+	&& isset($data->user_name) 
+	&& isset($data->user_email) 
+	&& is_numeric($data->id) 
+	&& !empty(trim($data->user_name)) 
+	&& !empty(trim($data->user_email))
+	){
+    $username = mysqli_real_escape_string($db_conn, trim($data->user_name));
+    $useremail = mysqli_real_escape_string($db_conn, trim($data->user_email));
+    if (filter_var($useremail, FILTER_VALIDATE_EMAIL)) {
+        $updateUser = mysqli_query($db_conn,"UPDATE `users` SET `user_name`='$username', `user_email`='$useremail' WHERE `id`='$data->id'");
+        if ($updateUser) {
+            echo json_encode(["success"=>1,"msg"=>"User Updated."]);
+        } else {
+            echo json_encode(["success"=>0,"msg"=>"User Not Updated!"]);
+        }
+    } else {
+        echo json_encode(["success"=>0,"msg"=>"Invalid Email Address!"]);
+    }
+} else {
+    echo json_encode(["success"=>0,"msg"=>"Please fill all the required fields!"]);
+}
+mysqli_close($db_conn);
+```
+
+- ユーザを削除するファイル`src/html/delete-user.php`を作成する
+```php:delete-user.php
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: access");
+header("Access-Control-Allow-Methods: POST");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+require 'db_connection.php';
+
+$data = json_decode(file_get_contents("php://input"));
+if(isset($data->id) && is_numeric($data->id)){
+    $delID = $data->id;
+    $deleteUser = mysqli_query($db_conn,"DELETE FROM `users` WHERE `id`='$delID'");
+    if($deleteUser){
+        echo json_encode(["success"=>1,"msg"=>"User Deleted"]);
+    } else {
+        echo json_encode(["success"=>0,"msg"=>"User Not Found!"]);
+    }
+} else {
+    echo json_encode(["success"=>0,"msg"=>"User Not Found!"]);
+}
+mysqli_close($db_conn);
+```
+
+- 今回は手続き型でmysqliを実装している
+
+<details>
+<summary>include()とrequire()の違い</summary>
+
+- PHPで外部ファイルを読み込む場合、`require`、`require_once`、`include`、`include_once`の４種類の読み込み方が存在する
+
+**require**
+> require は include とほぼ同じですが、失敗した場合に E_COMPILE_ERROR レベルの致命的なエラーも発生するという点が異なります。 
+> つまり、スクリプトの処理がそこで止まってしまうということです。
+> 一方 include の場合は、警告 (E_WARNING) を発するもののスクリプトの処理は続行します。
+- requireは指定されたファイルが読み込めない場合、Fatal Error(致命的なエラー)となり処理が停止
+
+**require_once**
+> require_once 文は require とほぼ同じ意味ですが、 ファイルがすでに読み込まれているかどうかを PHP がチェックするという点が異なります。
+> すでに読み込まれている場合はそのファイルを読み込みません。
+- ファイルがすでに読み込まれている場合は再読み込みしない
+
+**include**
+> include は、ファイルを見つけられない場合に warning を発行します。
+> 一方 require の場合は、同じ場合に fatal error を発行する点が異なります。
+- includeは指定されたファイルが読み込めない場合、Warning(警告)となるがその先の処理はそのまま実行
+
+**include_once**
+> include_once 命令は、スクリプトの実行時に指定 したファイルを読み込み評価します。
+> この動作は、 include 命令と似ていますが、ファイルからのコー ドが既に読み込まれている場合は、再度読み込まれないという重要な違い があります。また、include_once は TRUE を返します。
+> その名が示す通り、ファイルは一度しか読み込まれません。
+- ファイルがすでに読み込まれている場合は再読み込みしない
+
+**使い分け**
+- ファイルが読み込めない場合に処理を停止する場合はrequireを使用
+- 一度しか読み込まなくていいものは_onceをつける
+
+</details>
+
+<details>
+<summary>filter_var関数</summary>
+
+- フォームの値をチェックする等のバリデート関数
+- preg_macth等を使わなくても手軽に行えるバリデート関数
+- pregと同じ感じで正規表現でのチェックも行える（以下は電話番号の検証例）
+```php:
+$reg = '03-123';
+// filter_var(チェックしたい値, FILTER_VALIDATE_REGEXP, array(‘options’ => array(‘regexp’ => チェックパターン)))
+$options = array('options' => array('regexp' => '/^0\d{1,5}-?\d{0,4}-?\d{4}$/'));
+$value = filter_var($reg, FILTER_VALIDATE_REGEXP, $options);
+var_dump($value);
+ 
+=> boolean false
+```
+- コールバックフィルターとかも存在する
+```php:
+// filter_var(コールバック関数の引数, FILTER_CALLBACK, array(‘options’ => コールバック関数名を指定))
+function chars_count($str)
+{
+    $cnt = mb_strlen($str);
+    if ($cnt > 10 ) {
+        return $str;
+    } else {
+        return false;
+    }
+ 
+}
+$callback = "文字列カウント";
+$str = filter_var($callback, FILTER_CALLBACK, array('options' => 'chars_count'));
+var_dump($str);
+ 
+=> boolean false
+```
+- オプションを配列で取る方法
+```php:
+$options = array(
+    'options' => array(
+        'default' => '値に収まりませんでした。', // フィルタが失敗した場合に返す値
+        // その他のオプションをここ
+        'min_range' => 0,
+        'max_range' => 100,
+    ),
+    'flags' => FILTER_FLAG_ALLOW_OCTAL,
+);
+$var = filter_var('200', FILTER_VALIDATE_INT, $options);
+var_dump($var);
+ 
+=> string '値に収まりませんでした。'
+```
+</details>
+
