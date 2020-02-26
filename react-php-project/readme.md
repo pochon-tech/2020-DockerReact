@@ -496,7 +496,7 @@ CHOKIDAR_USEPOLLING=true
 ```
 src
 ├─Actions
-│ └─Action.js
+│ └─Actions.js
 ├─components
 │ ├─AddUser.js
 │ └─GetUser.js
@@ -526,3 +526,9 @@ export const Provider = AppContext.Provider
 - **react-reduxのProviderとほぼ同様の機能で同名のProviderというコンポーネントをリリース**
 
 </details>
+
+**Actions.js**
+- ここでは、全てのCRUD操作を実行し、状態を一元管理する
+```js:Actions.js
+
+```
