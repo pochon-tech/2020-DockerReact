@@ -462,3 +462,67 @@ var_dump($var);
 ```
 </details>
 
+## React Appを作成する
+
+**準備**
+
+- create-react-appを使用してReactアプリを作成する
+```sh:
+apple@appurunoMacBook-Pro react-php-project % docker-compose exec app sh
+/app npx create-react-app react-app
+```
+- 開発Portの変更とホットリロードの適用するために、.envファイルをプロジェクト直下に設置
+```.env
+PORT=8001
+CHOKIDAR_USEPOLLING=true
+```
+- CSSはbootstrapを使用するので、/public/index.htmlのheadセクションに下記を貼り付ける
+```
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+```
+- 下記不要ファイルを削除する
+  - App.css
+  - App.test.js
+  - index.css
+  - logo.svg
+  - setupTest.js
+  - public/logo192.png
+  - public/logo512.png
+  - public/robots.txt
+  
+**srcの作成**
+
+- 下記のディレクトリ構成を目指す
+```
+src
+├─Actions
+│ └─Action.js
+├─components
+│ ├─AddUser.js
+│ └─GetUser.js
+├─App.js
+├─Context.js
+├─index.js
+└─serviceWorker.js
+```
+
+**Context.js**
+- ここではReactContextの初期化を行う
+```js:Context.js
+import React from "react"
+export const AppContext = React.createContext()
+export const Provider = AppContext.Provider
+```
+
+<details>
+<summary>ReactContextの背景</summary>
+
+- Reactでは、配下の**コンポーネントにデータを渡すための手段としてpropsという機能**が提供されている
+- ところが、このpropsを使用すると、親コンポーネントから子コンポーネントへ、さらに孫コンポーネントへ、...、といった具合で、**渡したいコンポーネントまで渡したいデータをバケツリレーのように延々と渡していかなければならない弱点**があった（**prop drilling問題**）
+- その問題を解消するべく、**どのコンポーネントからでも特定のデータにアクセスできる仕組み**がreact-reduxから提供された
+- これは、Reduxを使用したことのある人なら誰もが知っている**Providerコンポーネント**のことを指す
+- Providerコンポーネントとは文字通り**Providerコンポーネントでwrapした全てのコンポーネントに対して特定のデータを届けることを目的とするコンポーネント**になる
+- ところがその後、Reactモジュールは、バージョンv16.3で、Reduxを差し置いてある機能を追加した...
+- **react-reduxのProviderとほぼ同様の機能で同名のProviderというコンポーネントをリリース**
+
+</details>
