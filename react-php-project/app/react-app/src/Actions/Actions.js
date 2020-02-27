@@ -19,7 +19,11 @@ class Actions extends React.Component {
   }
 
   // Create User
+  insertUser = (event, userName, UserMail) => {
+    event.preventDefault()
+    event.persist() // 非同期にeventオブジェクトを参照
 
+  }
   // Update User
 
   // Delete User

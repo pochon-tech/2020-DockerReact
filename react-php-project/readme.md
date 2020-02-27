@@ -532,3 +532,88 @@ export const Provider = AppContext.Provider
 ```js:Actions.js
 
 ```
+
+<details>
+<summary>非同期にeventオブジェクトを参照</summary>
+
+Reactでイベントコールバックのeventオブジェクトに非同期でアクセスしようとするとエラーが出て怒られる
+```js:
+// 例えば､setStateの第二引数のコールバック内でeventを参照しようとした時
+function clickHandler() {
+    this.setState({
+        foo: 'bar'
+    }, function() {
+        console.log(event.target.value) // error
+    })
+}
+```
+理由
+> The SyntheticEvent is pooled. 
+> This means that the SyntheticEvent object will be reused and all properties will be nullified after the event callback has been invoked. 
+> This is for performance reasons. As such, you cannot access the event in an asynchronous way.
+- eventオブジェクトはReactによってSyntheticEventオブジェクトとしてラップされていて､パフォーマンスのために使いまわしている
+- その関係で､イベントコールバックが実行され終わったら全てのプロパティをnullにするから､非同期ではアクセスできない
+解決策
+> If you want to access the event properties in an asynchronous way, you should call event.persist() on the event, which will remove the synthetic event from the pool and allow references to the event to be retained by user code.
+- 非同期でアクセスしたかったらevent.persist()使う
+- なのでイベントコールバックの中で呼んであげれば非同期でeventを参照することができる
+```js:
+function clickHandler(event) {
+    event.persist()
+    this.setState({
+        foo: 'bar'
+    }, function() {
+        console.log(event.target.value) // OK
+    })
+}
+```
+
+**余談**
+- setStateの挙動について気になったので余談
+```js:
+import React, { Component } from "react";
+import ReactDOM from "react-dom";
+import "./styles.css";
+
+class Counter extends Component {
+  state = {
+    count: 0
+  };
+
+  render() {
+    return (
+      <div>
+        <h1>Count: {this.state.count}</h1>
+        <button onClick={this.handleClickFunction}>Function Count up</button>
+        <button onClick={this.handleClickObject}>Object Count up</button>
+      </div>
+    );
+  }
+
+  handleClickFunction = () => {
+    this.setState(prevState => {
+      return { count: prevState.count + 1 };
+    });
+    this.setState(prevState => {
+      return { count: prevState.count + 1 };
+    });
+  };
+
+  handleClickObject = () => {
+    this.setState({ count: this.state.count + 1 });
+    this.setState({ count: this.state.count + 1 });
+  };
+}
+
+const rootElement = document.getElementById("root");
+ReactDOM.render(<Counter />, rootElement);
+```
+- 上記のサンプルは、**setStateの引数を関数にした場合とObjectにした場合の違い**
+- 引数に関数を渡した場合、カウントは２回行われている
+- 引数にObjectを渡した場合、カウントは１回しか行われない
+- 上記からわかるように、setState()は、引数にオブジェクトが渡された場合に、stateを即時にアップデートすることを保証しない
+- Reactは、パフォーマンスを高めるため、複数のsetState（）を単一の更新にバッチするため
+- そのため、1つの関数内でstateの更新を連続的に行うときは、引数に関数を渡す必要がある
+
+</details>
+
