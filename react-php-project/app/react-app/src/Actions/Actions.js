@@ -22,7 +22,21 @@ class Actions extends React.Component {
   insertUser = (event, userName, UserMail) => {
     event.preventDefault()
     event.persist() // 非同期にeventオブジェクトを参照
-
+    Axios.post('http://localhost/add-user.php',{
+      user_name:userName,
+      user_email:UserMail
+    })
+    .then(({data})=>{
+      if (data.success === 1) {
+        this.setState({
+          users:[
+            ...this.state.users,
+            { 'id': data.id, 'user_name:': userName, 'user_mail': userMail }
+          ]
+        })
+        event.target.reset()
+      }
+    })
   }
   // Update User
 

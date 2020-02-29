@@ -489,7 +489,604 @@ CHOKIDAR_USEPOLLING=true
   - public/logo192.png
   - public/logo512.png
   - public/robots.txt
+
+<details>
+<summary>Reactおさらい（読まなくて良い）</summary>
+
+**JSX**
+- ReactではJSXと呼ばれるJavaScriptの拡張を使用してReact要素を簡便な形式で作成
+```js:
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+var greeting = React.createElement('h1', null, 'Hi!'); // React.createElement メソッドで React 要素を作成
+
+ReactDOM.render( // ReactDOM.render メソッドで、それを出力
+  greeting,
+  document.getElementById('root')
+);
+```
+
+**React.Component**
+- コンポーネントは`React.Component`から派生したクラスとして作成し、`render`メソッドでビューとなる`JSX`を返す
+```js:
+import React from 'react';
+// import React, { Component } from 'react'; // 先頭の import ラインで次のように Component メンバーまでインポートもできる
+
+class Greeting extends React.Component {
+  render() {
+    return <h1>Hi!</h1>;
+  }
+}
+
+export default Greeting;
+```
+
+**Reactのプロパティ**
+- Reactコンポーネントには`プロパティ`を設定できる
+```js:
+import React from 'react';
+import ReactDOM from 'react-dom';
+import Greeting from './Greeting';
+
+ReactDOM.render(
+  <Greeting firstName="Hanako"/>, // firstName というプロパティをコンポーネントに設定
+  document.getElementById('root')
+);
+```
+- コンポーネント側のコード内では、`this.props.<プロパティ名>`で参照できる
+```js:
+import React from 'react';
+
+class Greeting extends React.Component {
+  render() {
+    return <h1>Hi {this.props.firstName} san!</h1>;
+  }
+}
+
+export default Greeting;
+```
+
+**クラス継承でのプロパティ**
+- ES6からclass...extendsでクラスの継承ができるようになった
+```js:
+import React from 'react';
+
+class Greeting extends React.Component {
+  render() {
+    return <h1>Hi {this.props.firstName} san!</h1>;
+  }
+}
+
+export default Greeting;
+```
+```js:
+import Animal from './Animal';
+
+export default class Cat extends Animal {
+
+  /** 
+   * constructor にて、prop を受取り、super にそれを渡すことで基底クラス (Animal クラス) のコンストラクタに prop を渡して
+   * */
+  constructor(props){
+    super(props);
+  }
+
+  render() {
+    return (
+      <div>
+        <h2>I'm a cat. </h2>
+        {super.saySomething()}
+      </div>
+    );
+  }
+}
+```
+```js:
+import React from 'react';
+import ReactDOM from 'react-dom';
+import Animal from './Animal';
+import Cat from './Cat';
+
+ReactDOM.render(
+  <div>
+    <Animal/>
+    <Cat firstName="Tora"/>
+  </div>,
+  document.getElementById('root')
+);
+```
+
+**ライフサイクル**
+- コンポーネントが画面にレンダリングされることをマウントという
+- コンポーネントが作成され、マウントされる前、マウント時、マウントされた後、それぞれにメソッドがコールバックされる
+  - constructor: コンポーネントが作成されたとき
+  - componentWillMount: マウントされる前
+  - render: マウント
+  - componentDidMount: マウントされた後
+```js:
+
+export default class Person extends React.Component {
+
+  constructor(props){
+    console.log('constructor');
+    super(props);
+  }
+
+  componentWillMount(){
+    console.log('componentWillMount');
+  }
+
+  componentDidMount(){
+    console.log('componentDidMount');
+  }
+
+  componentWillUnmount(){
+    console.log('componentWillUnmount');
+  }
+
+  componentWillUpdate(nextProps, nextState){
+    console.log('componentWillUpdate');
+  }
+
+  componentDidUpdate(prevProps, prevState){
+    console.log('componentDidUpdate');
+  }
+
+  componentWillReceiveProps(nextProps){
+    console.log('componentWillReceiveProps');
+  }
+
+  shouldComponentUpdate(nextProps, nextState){
+    console.log('shouldComponentUpdate');
+  }
+
+  render() {
+    console.log('render');
+    return <div>Person</div>;
+  }
+}
+```
+
+**コンポーネントの状態とイベント処理**
+- 具体例:
+  - ボタンがある
+  - ボタンには数字が書かれている
+  - ボタンをクリックする度に数字が3ずつ増える
+- 着目点は:
+  - ボタンがクリックされた回数を保持している
+  - クリックイベントに応答している
+  - 表示を書き換えている
+- ソースコード:
+```js:
+import React from 'react';
+
+export default class ButtonComponent extends Resact.Component {
+  constructor(props){
+    console.log('constructor');
+    super(props);
+    this.state = { count: 0 };
+    this.onClick = this.onClick.bind(this)
+  }
+
+  onClick(){
+    console.log('onClick');
+    this.setState((prevState, props) => {
+      console.log('setState | prevState.count = ' + prevState.count);
+      return { count: ++prevState.count }
+    });
+  }
   
+  componentWillMount(){
+    console.log('componentWillMount');
+  }
+
+  componentDidMount(){
+    console.log('componentDidMount');
+  }
+
+  componentWillUnmount(){
+    console.log('componentWillUnmount');
+  }
+
+  componentWillUpdate(nextProps, nextState){
+    console.log('componentWillUpdate');
+    console.log(nextState);
+  }
+
+  componentDidUpdate(prevProps, prevState){
+    console.log('componentDidUpdate');
+    console.log(prevState);
+  }
+
+  componentWillReceiveProps(nextProps){
+    console.log('componentWillReceiveProps');
+  }
+
+  shouldComponentUpdate(nextProps, nextState){
+    console.log('shouldComponentUpdate');
+    return true;
+  }
+  render() {
+    console.log('render');
+    var buttonStyle = {
+      width: 100,
+      height: 100,
+      backgroundColor: "#3F51B5",
+      color: "rgba(255,255,255,.87)",
+      border: "none",
+      borderRadius: 20,
+      fontSize: 48,
+      fontWeight: "bold"
+    };
+    return (
+      <button style={buttonStyle} onClick={this.onClick}>
+        {this.state.count}
+      </button>
+    );
+  }
+}
+```
+- constructorで行っている事:
+  - プロパティを受取り`super`で基底クラスのコンストラクタに渡す（お約束）
+  - `this.state`に`{ count: 0 }`という**状態(state)**を設定 (`this.state`を初期化している)
+    - Reactコンポーネントは**state**というメンバーを持つ
+    - これが**状態を保持する場所**になる
+  - ボタンのクリックイベントハンドラとして、CountButtonクラス内のonClickメソッドを指定している
+    - ES6クラスのメソッドは、既定ではイベントハンドラにバインドされない
+    - メソッドをイベントハンドラに指定するためには`this.メソッド = this.メソッド.bind(this)`を行う必要がある
+    > 例えば、fooが関数オブジェクトのとき、`foo.bind(this)`とすると、bindメソッドはthisを受け取る新しい`バウンド関数(BF)`を生成する
+    > BFは`エキゾチック関数オブジェクト`と呼ばれ、元の関数をラップして、内部にある元の関数を呼び出す関数オブジェクトを指す
+- renderメソッドで行っている事:
+  - ボタンのスタイルを指定している
+  - ボタンのクリックイベントを設定している (`onClick={this.onClick}`)
+  - `{this.state.count}`はボタンに表示する文字
+- onClickメソッドで行っている事:
+  - `this.setState`メソッドを呼び出している
+  - `this.setState`は**アップデータメソッド**を受取る
+    - アップデータメソッドは、`(prevState, props) => (新しい状態)`という形をしている
+    - 現在の状態 (`this.state`) を`prevState`として受け取り、`this.state`にセットするオブジェクトを返せば良い
+- shouldComponentUpdateが行っている事:
+  - これまでで、`this.onClick`で`this.setState()`を呼ぶ事で`this.state`を更新した
+  - ボタンのラベルの数字を更新したい
+  - 実は、`this.setState()`を呼ぶと、ライフサイクルのひとつとして`shouldComponentUpdate`メソッドが呼ばれるのである
+  - `shouldComponentUpdate`でtrueを返すことで、**更新処理が必要である**と指定される (falseを返すと更新処理は行われない)
+  - trueを返す事で、`shouldComponentUpdate` -> `componentWillUpdate` -> `render` -> `componentDidUpdate` が呼ばれる
+  - 今回はボタンの表示が切り替われば良いので、`render`が呼び出されば良いので、特に追加処理は必要ない
+
+**シンセティックイベント**
+- シンセティックイベントとは**イベントプーリング**のこと
+- **ReactではSyntheticイベントを受け取る:**
+  - イベント処理は昔からブラウザの互換性に問題があるとされている
+  - ブラウザごとに異なるタイプのオブジェクトを受け取り、ブラウザ間で同じような動作を実現することは難しかった
+  - まさにこれこそが、各種ラッパーライブラリを使う動機の一つ
+  - Reactでも、イベントハンドラでは`Synthetic`イベントを受けとることになっている
+  > Synthetic イベントは次のようなプロパティやメソッドを持っている
+  > boolean bubbles
+  > boolean cancelable
+  > DOMEventTarget currentTarget
+  > boolean defaultPrevented
+  > number eventPhase
+  > boolean isTrusted
+  > DOMEvent nativeEvent
+  > void preventDefault()
+  > boolean isDefaultPrevented()
+  > void stopPropagation()
+  > boolean isPropagationStopped()
+  > DOMEventTarget target
+  > number timeStamp
+  > string type
+  - `preventDefault()`や`stopPropagation`などのDOMイベントのメソッドはすぐに呼べるようになっていて便利
+  - オブジェクトの元のDOMターゲットは`target`でとれる
+
+**イベントプーリング**
+- Syntheticイベントを使用する際に気をつけないといけないのがイベントプーリングであること
+  - パフォーマンス向上のために、Syntheticイベントオブジェクトは、あらかじめ作成されてプールされている
+  - つまり、Syntheticイベントオブジェクトは作り置きされているのである
+  - 作り置きされて、そのオブジェクトのプロパティだけ差し替えられて次々と使われる仕組みになっている
+  - そのため、無駄なオブジェクトの生成を抑える事ができてパフォーマンスの向上につながっている
+  - しかし、使うときに注意が必要
+- 例：テキストボックスに入力された文字列が、直下に表示される
+```js:
+import React from 'react';
+
+export default class CCText extends React.Component {
+  constructor(props) {
+      super(props);
+      this.state = { s: '' };
+      this.onChange = this.onChange.bind(this);
+  }
+  
+  onChange(e) {
+    var v = e.target.value;
+    this.setState((prevState, props) => {
+      return { s: v }
+    });
+  }
+
+  shouldComponentUpdate() {
+    return true;
+  }
+
+  render() {
+    return (
+      <div>
+        <input type="text" onChange={this.onChange}/>
+        <div>{this.state.s}</div>
+      </div>
+    );
+  }
+}
+```
+- onChangeでやっている事:
+  - わざわざ`e.target.value`で値を取り出して変数vに保存してから`this.setState`を呼び出している
+  - これは、`this.setState`の中で`e.target.value`を呼び出すと`TypeError: Cannot read property 'value' of null`が発生するため回避している
+  - このエラーが発生してしまっている原因は、**Syntheticイベントオブジェクトであるeのtargetプロパティが、すでにnullにクリアされているため**である
+  - もし、`this.setState`の中でも`e.target.value`を呼び出したいならば、`persist()`を呼ぶ必要がある
+  ```js:
+    onChange() {
+      e.persist();
+      this.setState((prevState, props) => { 
+        return { s: e.target.value }
+      })
+    }
+  ```
+
+**Reactでフォームを扱う**
+- フォームは、何らかのデータ更新等を扱うものであるため、文字を入力したり、ドロップダウンから何かを選んだり、「OK」ボタンなどを押したり、というイベント処理が基本
+- データは`state`で管理する:
+  - Reactでは、状態は`state`で維持する
+  - 基本はコンストラクタで初期化して、適宜`setState`を呼び出して状態を更新する
+  - フォームのデータも`state`で管理する
+  - フォーム要素の`value`に`this.state`のフィールドを関連づける
+  - `onChange`等のイベントハンドラで、setStateを呼び出して状態を更新する
+  - 逆に言うと、`this.state`との関連付けの`value`はちゃんと更新しないとUIも更新されない
+- `selet`と`textarea`を持つフォームの例:
+```js:
+import React from 'react';
+
+export default class Form1 extends React.Component {
+  
+  constructor(props) {
+    super(props);
+    this.state = {
+      usstate: props.initState,
+      desc: 'This is for a text area.'
+    }
+    this.onChange = this.onChange.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+    this.onTextAreaChange = this.onTextAreaChange.bind(this);
+  }
+
+  onChange(e) {
+    console.log(e.target.value);
+    // setState にいきなりオブジェクトを渡しているが、下記のように書くと現在の this.state に新しい値がマージされる
+    this.setState({ usstate: e.target.value });
+  }
+
+  onSubmit(e){
+    e.preventDefault();
+    console.log("onSubmit");
+    console.log(this.state);
+  }
+
+  onTextAreaChange(e){
+    this.setState({ desc: e.target.value });
+  }
+
+  render() {
+    var status = [
+      { code: "CA", name: "California" },
+      { code: "HI", name: "Hawaii" },
+      { code: "TX", name: "Texas"},
+      { code: "WA", name: "Washington"} 
+    ];
+    var options = status.map(
+      (n) => (
+        <option key={n.code} value={n.code}>
+          {n.name}
+        </option>
+      )
+    );
+    return (
+      <form onSubmit={this.onSubmit}>
+        <div>
+          <select
+            value={this.state.usstate}
+            onChange={this.onChange}>
+            {options}
+          </select>
+          <textarea
+            value={this.state.desc}
+            onChange={this.onTextAreaChange} />
+        </div>
+        <div><button type="submit">OK</button></div>
+      </form>
+    );
+  }
+}
+```
+```js:
+import React from 'react';
+import ReactDOM from 'react-dom';
+import Form1 from './Form1';
+
+ReactDOM.render(
+  <Form1 initState='Hi' />,
+  document.getElementById('root')
+)
+```
+
+**Google の UI ライブラリ Material Design Lite (MDL) の適用方法**
+- `public/index.html`に下記の4行を追加する
+```html:
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+<script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css" />
+```
+- 最後の行は色合いを指定している箇所
+- 次に HTML 要素にタグ付けをする
+```js:
+import React from 'react';
+
+export default class Form2 extends React.Component {
+
+  constructor(props){
+    super(props);
+    this.state = {
+      usstate: props.initState,
+      desc: 'This is for a text area.'
+    };
+    this.onChange = this.onChange.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+    this.onTextAreaChange = this.onTextAreaChange.bind(this);
+  }
+
+  onChange(e){
+    console.log(e.target.value);
+    this.setState({ usstate: e.target.value});
+  }
+
+  onSubmit(e){
+    e.preventDefault();
+    console.log("onSubmit");
+    console.log(this.state);
+  }
+
+  onTextAreaChange(e){
+    this.setState({ desc: e.target.value });
+  }
+
+  render() {
+    var states = [
+      { code: "CA", name: "California" },
+      { code: "HI", name: "Hawaii" },
+      { code: "TX", name: "Texas"},
+      { code: "WA", name: "Washington"} ];
+    var options = states.map(
+      (n)=>(
+        <option key={n.code} value={n.code}>
+          {n.name}
+        </option>
+      )
+    );
+    var formStyle = {
+      padding: 20
+    }
+    return (
+      <form onSubmit={this.onSubmit} style={formStyle}>
+        <div className="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+          <select
+            className="mdl-textfield__input"
+            id="select1"
+            value={this.state.usstate}
+            onChange={this.onChange}>
+            {options}
+          </select>
+          <label
+            className="mdl-textfield__label"
+            htmlFor="select1">U.S. State</label>
+        </div>
+        <div>
+          <div className="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+            <textarea
+              type="text"
+              rows="3"
+              id="textarea1"
+              className="mdl-textfield__input"
+              value={this.state.desc}
+              onChange={this.onTextAreaChange}/>
+            <label
+              className="mdl-textfield__label"
+              htmlFor="textarea1">Description</label>
+          </div>
+        </div>
+        <div>
+          <button
+            className="mdl-button mdl-js-button mdl-button--raised mdl-button--colored"
+            type="submit">OK</button>
+        </div>
+      </form>
+    );
+  }
+}
+```
+
+**イベントによるコンポーネント通信**
+- Reactではコンポジットによって新しいコンポーネントを作成することが推奨されている
+- 多機能のコンポーネントをひとつドンと作るより、単機能の小さいコンポーネントを作り、それぞれのコンポーネントを組み合わせて機能を増やすという考え方
+- ここでは、コンポジットを構成するコンポーネント間でのカスタムイベントの実装方法を紹介
+- 具体的には、**プロパティとして関数オブジェクトを受けとるようにしておき、 必要に応じてそれを呼び出すことでイベントを発行する**という考え方
+- 例: MyTextBoxというコンポーネントを作成し、プロパティでメソッドを受け取れ、それを使う側がメソッドを設定したときに呼び出す
+```js:
+import React from 'react';
+
+export default class MyTextBox extends React.Component {
+
+  constructor(props) {
+    super(props);
+    this.state = { s: '' };
+    this.onChange = this.onChange.bind(this);
+  }
+
+  onChange(e) {
+    this.setState({ s: e.target.value });
+    if (this.props.onMyTextBoxChanged) {
+      this.props.onMyTextBoxChanged(e.target.value);
+    }
+  }
+
+  shouldComponentUpdate(nextProps, nextState) { return true; }
+
+  render() {
+    return (
+      <div>
+        <input
+          type="text"
+          value={this.state.s}
+          onChange={this.onChange}
+        />
+      </div>
+    );
+  }
+}
+```
+- 続いて、MyTextBox を持つコンポーネント MyArea を作成する
+```js:
+import React from 'react';
+import MyTextBox from './MyTextBox';
+
+export default class MyArea extends React.Component {
+
+  constructor(props){
+    super(props);
+    this.state = { s: "" };
+    this.onMyTextBoxChanged = this.onMyTextBoxChanged.bind(this);
+  }
+
+  onMyTextBoxChanged(v){
+    console.log(v);
+    this.setState({s: v});
+  }
+
+  shouldComponentUpdate(nextProps, nextState){ return true; }
+
+  render() {
+    return (
+      <div>
+        <MyTextBox onMyTextBoxChanged={this.onMyTextBoxChanged}/>
+        <div>{this.state.s}</div>
+      </div>
+    );
+  }
+}
+```
+- MyTextBoxのプロパティとして、`this.onMyTextBoxChanged`を渡している
+- これにより、MyTextBoxは必要に応じてこのメソッドをコールバックすることができる
+
+</details>
+
 **srcの作成**
 
 - 下記のディレクトリ構成を目指す
