@@ -23,3 +23,19 @@ docker-compose: version 1.25.2
 - app-redux-typescript: React&Redux&TypeScript環境の立ち上げ
 - react-php-project: React & PHP & Mysql の簡易的なプロジェクト例
   - Reactのおさらい（JSX〜
+
+## Dcoker for mac
+
+<details>
+<summary>Docker for Mac を使用していて「An HTTP request took too long to complete.」が出た場合</summary>
+
+- https://github.com/docker/compose/issues/5620
+- Docker for mac事態を再起動を行うと治るらしい
+
+```sh:
+apple@appurunoMacBook-Pro react-php-project % docker-compose restart
+ERROR: An HTTP request took too long to complete. Retry with --verbose to obtain debug information.
+If you encounter this issue regularly because of slow network conditions, consider setting COMPOSE_HTTP_TIMEOUT to a higher value (current value: 60).
+```
+
+</details>

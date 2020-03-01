@@ -33,7 +33,7 @@ services:
     - DB_HOST=mysql
     - DB_DATABASE=db
     - DB_USERNAME=user
-    - DB_PASSWORD=password
+    - DB_PASSWORD=pass
     ports: 
     - "80:80"
 

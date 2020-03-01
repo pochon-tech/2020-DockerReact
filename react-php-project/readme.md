@@ -1125,9 +1125,105 @@ export const Provider = AppContext.Provider
 </details>
 
 **Actions.js**
+- `src/Actions/`のようにディレクトリを切り、イベント処理を実装していく
 - ここでは、全てのCRUD操作を実行し、状態を一元管理する
 ```js:Actions.js
+import React from "react"
+import Axios from "axios"
 
+class Actions extends React.Component {
+  state = { users: [] }
+
+  // Select Users 
+  /** ユーザを全件取得する */
+  fetchUsers = () => {
+    Axios.get('http://localhost/all-users.php')
+      .then(({ data }) => {
+        if (data.success === 1) this.setState({ users: data.users.reverse() })
+      })
+      .catch(e => { console.log(e) })
+  }
+
+  // Create User
+  insertUser = (event, user_name, user_email) => {
+    event.preventDefault()
+    event.persist() // 非同期にeventオブジェクトを参照
+    Axios.post('http://localhost/add-user.php', {
+      user_name: user_name,
+      user_email: user_email
+    })
+      .then(function ({ data }) {
+        if (data.success === 1) {
+          this.setState({
+            users: [
+              ...this.state.users,
+              { 'id': data.id, 'user_name:': user_name, 'user_mail': user_email }
+            ]
+          })
+          event.target.reset()
+        } else {
+          alert(data.msg)
+        }
+      }.bind(this))
+      .catch(function (e) { console.log(e) })
+  }
+
+  // Update User
+  editMode = (id) => {
+    let users = this.state.map((user) => {
+      user.isEditing = (user.id === id) ? true : false
+      return user
+    })
+    this.setState({ users })
+  }
+
+  handleUpdate = (id, user_name, user_email) => {
+    Axios.post('http://localhost/update-user.php', {
+      id: id,
+      user_name: user_name,
+      user_mail: user_email
+    })
+      .then(({ data }) => {
+        if (data.success === 1) {
+          let users = this.state.users.map((user) => {
+            user.isEditing = (user.id !== id) ? true : false
+            return user
+          })
+          this.setState({ users })
+        } else {
+          alert(data.msg)
+        }
+      })
+      .catch(e => { console.log(e) })
+  }
+
+  // Delete User
+  cancelEdit = (id) => {
+    let users = this.state.map((user) => {
+      user.isEditing = (user.id === id) ? true : false
+      return user
+    })
+    this.setState({ users })
+  }
+
+  handleDelete = (id) => {
+    let deleteUser = this.state.users.filter(user => {
+      return user.id !== id
+    });
+    Axios.post('http://localhost/update-user.php', {
+      id: id
+    })
+      .then(({ data }) => {
+        if (data.success === 1) {
+          this.setState({ deleteUser })
+        } else {
+          alert(data.msg)
+        }
+      })
+      .catch(e => { console.log(e) })
+  }
+}
+export default Actions
 ```
 
 <details>
@@ -1214,3 +1310,189 @@ ReactDOM.render(<Counter />, rootElement);
 
 </details>
 
+
+**Componentの作成**
+- `src/components`のようにディレクトリを切り、コンポーネントを作成する
+
+- `src/components/AddUser.js`
+```js:
+import React from 'react'
+import { AppContext } from '../Context'
+
+class AddUser extends React.Component {
+  static contextType = AppContext
+
+  insertUser = (event) => {
+    this.context.insertUser(event, this.username.value, this.useremail.value)
+  }
+
+  render() {
+    return (
+      <form onSubmit={this.insertUser}>
+        <div className="form-row">
+          <div className="form-group col-sm-6">
+            <label className="font-weight-bold">Name</label>
+            <input type="text" name="username" ref={(val) => this.username = val} className="form-control" placeholder="Name" />
+          </div>
+          <div className="form-group col-sm-6">
+            <label className="font-weight-bold">Email</label>
+            <input type="email" name="useremail" ref={(val) => this.useremail = val} className="form-control" placeholder="Email" />
+          </div>
+          <div className="form-group col-sm-12 text-right">
+            <button type="submit" className="btn btn-primary">Add user</button>
+          </div>
+        </div>
+      </form>
+    )
+  }
+}
+export default AddUser
+```
+
+- `src/components/GetUsers.js`
+```js:
+import React, { Component } from 'react'
+import { AppContext } from '../Context'
+
+class GetUsers extends Component {
+  static contextType = AppContext
+
+  componentDidMount() {
+    this.context.get_users()
+  }
+
+  handleUpdate = (id) => {
+    this.context.handleUpdate(id, this.name.value, this.email.value);
+  }
+
+  render() {
+    let allUsers;
+    let mainData;
+
+    allUsers = this.context.all_users.map(({ id, user_name, user_email, isEditing }) => {
+      return isEditing === true ? (
+        <tr key={id}>
+          <td><input className="form-control" type="text" ref={(item) => this.name = item} defaultValue={user_name} /></td>
+          <td><input className="form-control" type="email" ref={(item) => this.email = item} defaultValue={user_email} /></td>
+          <td>
+            <button className="btn btn-success mr-2" onClick={() => this.handleUpdate(id)}>Save</button>
+            <button onClick={() => this.context.cancelEdit(id)} className="btn btn-light">Cancel</button>
+          </td>
+        </tr>
+      ) : (
+          <tr key={id}>
+            <td>{user_name}</td>
+            <td>{user_email}</td>
+            <td>
+              <button className="btn btn-dark mr-2" onClick={() => this.context.editMode(id)}>Edit</button>
+              <button onClick={() => this.context.handleDelete(id)} className="btn btn-danger">Delete</button>
+            </td>
+          </tr>
+        );
+    });
+
+    if (this.context.all_users.length > 0) {
+      mainData = (
+        <table className="table table-striped table-bordered">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allUsers}
+          </tbody>
+        </table>
+      );
+    }
+    else {
+      mainData = (
+        <div className="alert alert-light" role="alert">
+          <h4 className="alert-heading">No User Found!</h4>
+          <hr />
+          <p>Please Insert Some Users.</p>
+        </div>
+      );
+    }
+    return (
+      <>
+        {mainData}
+      </>
+    );
+  }
+
+}
+export default GetUsers
+```
+
+**Contextの登録**
+- `src/App.js`
+```js:
+import React from 'react'
+import { Provider } from './Context'
+import AllUsers from './components/GetUsers'
+import AddUser from './components/AddUser'
+import Actions from './Actions/Actions'
+
+class App extends Actions {
+  render() {
+    const contextValue = {
+      all_users: this.state.users,
+      get_users: this.fetchUsers,
+      editMode: this.editMode,
+      cancelEdit: this.cancelEdit,
+      handleUpdate: this.handleUpdate,
+      handleDelete: this.handleDelete,
+      insertUser: this.insertUser
+    }
+    return (
+      <Provider value={contextValue}>
+        <div className="container-fluid bg-light">
+          <div className="container p-5">
+            <div className="card shadow-sm">
+              <h1 className="card-header text-center text-uppercase text-muted">React PHP CRUD Application</h1>
+              <div className="card-body">
+                <div className="row">
+                  <div className="col-md-4">
+                    <AddUser />
+                  </div>
+                  <div className="col-md-8">
+                    <AllUsers />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </Provider>
+    );
+  }
+}
+
+export default App
+```
+- `src/index.js`
+```js:
+import React, { StrictMode } from 'react'
+import ReactDOM from 'react-dom'
+import App from './App'
+import * as serviceWorker from './serviceWorker'
+
+ReactDOM.render(<StrictMode><App /></StrictMode>, document.getElementById('root'))
+
+// If you want your app to work offline and load faster, you can change
+// unregister() to register() below. Note this comes with some pitfalls.
+// Learn more about service workers: https://bit.ly/CRA-PWA
+serviceWorker.unregister()
+```
+
+**起動**
+
+```sh:
+apple@appurunoMacBook-Pro react-php-project % docker-compose exec app sh
+/app # cd react-app/
+/app/react-app # npm start
+```
